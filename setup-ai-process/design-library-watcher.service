@@ -1,0 +1,31 @@
+[Unit]
+Description=Design Library File Watcher
+Documentation=https://github.com/your-repo/design-library-indexer
+After=network.target ollama.service
+Wants=ollama.service
+
+[Service]
+Type=simple
+User=rpi
+Group=rpi
+WorkingDirectory=/home/rpi/ai-engine/design-library-indexer
+ExecStart=/home/rpi/ai-engine/venv/bin/python watch_library.py \
+    --library-root /mnt/design-library \
+    --debounce 30
+Restart=on-failure
+RestartSec=10
+StandardOutput=append:/home/rpi/ai-engine/logs/watcher.log
+StandardError=append:/home/rpi/ai-engine/logs/watcher-error.log
+
+# Resource limits to avoid starving the Pi
+MemoryMax=512M
+CPUQuota=50%
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/mnt/design-library/.index /home/rpi/ai-engine/chroma_data /home/rpi/ai-engine/logs
+
+[Install]
+WantedBy=multi-user.target

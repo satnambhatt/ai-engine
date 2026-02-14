@@ -1,0 +1,22 @@
+[Unit]
+Description=Full re-index of design library
+After=network.target ollama.service
+Wants=ollama.service
+
+[Service]
+Type=oneshot
+User=rpi
+Group=rpi
+WorkingDirectory=/home/rpi/ai-engine/design-library-indexer
+ExecStart=/home/rpi/ai-engine/venv/bin/python run_indexer.py index --full
+StandardOutput=append:/home/rpi/ai-engine/logs/reindex.log
+StandardError=append:/home/rpi/ai-engine/logs/reindex-error.log
+
+# Generous timeout — full index can take hours on Pi
+TimeoutStartSec=28800
+
+MemoryMax=1G
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/mnt/design-library/.index /home/rpi/ai-engine/chroma_data /home/rpi/ai-engine/logs
