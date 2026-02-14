@@ -1,3 +1,4 @@
 chroma_data/**
 venv/**
 logs/**
+**/__pycache__/**
