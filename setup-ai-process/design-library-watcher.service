@@ -9,6 +9,8 @@ Type=simple
 User=rpi
 Group=rpi
 WorkingDirectory=/home/rpi/ai-engine/design-library-indexer
+Environment="CHROMA_TELEMETRY=FALSE"
+Environment="ANONYMIZED_TELEMETRY=FALSE"
 ExecStart=/home/rpi/ai-engine/venv/bin/python watch_library.py \
     --library-root /mnt/design-library \
     --debounce 30

@@ -136,11 +136,14 @@ def cmd_search(args) -> None:
     store = VectorStore(config)
     store.initialize()
 
+    exclude_sections = None if args.include_head else ["head-meta"]
+
     results = store.search(
         query_embedding=result.embedding,
         n_results=args.n_results,
         framework=args.framework,
         component_category=args.category,
+        exclude_sections=exclude_sections,
     )
 
     if not results:
@@ -161,9 +164,12 @@ def cmd_search(args) -> None:
         print(f"      Similarity: {similarity:.3f} │ Framework: {r.framework} │ "
               f"Category: {r.component_category or 'n/a'} │ Section: {r.section_type}")
         print(f"      Repo: {r.repo_name or 'n/a'}")
-        # Show first 3 lines of the chunk
-        preview = "\n".join(r.text.strip().split("\n")[:3])
-        print(f"      Preview: {preview[:200]}...")
+        if args.show_code:
+            print(f"      Code:\n{r.text.strip()}")
+        else:
+            # Show first 3 lines of the chunk
+            preview = "\n".join(r.text.strip().split("\n")[:3])
+            print(f"      Preview: {preview[:200]}...")
         print()
 
 
@@ -232,6 +238,10 @@ def main():
                                help="Filter by framework (react, html, astro, etc.)")
     search_parser.add_argument("--category", type=str, default=None,
                                help="Filter by component category (hero, header, footer, etc.)")
+    search_parser.add_argument("--show-code", action="store_true",
+                               help="Show full chunk code instead of preview")
+    search_parser.add_argument("--include-head", action="store_true",
+                               help="Include <head> meta chunks in results (excluded by default)")
     _add_common_args(search_parser)
 
     # ── reset command ──

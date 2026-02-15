@@ -6,7 +6,12 @@ Uses persistent storage on disk (SQLite + Parquet via ChromaDB).
 """
 
 import logging
+import os
 from dataclasses import dataclass
+
+# Disable ChromaDB/PostHog telemetry before importing chromadb
+os.environ["CHROMA_TELEMETRY"] = "FALSE"
+os.environ["ANONYMIZED_TELEMETRY"] = "FALSE"
 
 import chromadb
 from chromadb.config import Settings
@@ -129,6 +134,7 @@ class VectorStore:
         framework: str | None = None,
         component_category: str | None = None,
         section_type: str | None = None,
+        exclude_sections: list[str] | None = None,
     ) -> list[SearchResult]:
         """
         Semantic search over the design library.
@@ -139,11 +145,15 @@ class VectorStore:
             framework: Optional filter (e.g., "react", "html", "astro").
             component_category: Optional filter (e.g., "hero", "header", "footer").
             section_type: Optional filter (e.g., "component", "style", "head").
+            exclude_sections: Section types to exclude (e.g., ["head-meta"]).
 
         Returns:
             List of SearchResult objects sorted by relevance.
         """
-        where_filter = self._build_where_filter(framework, component_category, section_type)
+        where_filter = self._build_where_filter(
+            framework, component_category, section_type,
+            exclude_sections=exclude_sections,
+        )
 
         try:
             results = self._collection.query(
@@ -216,6 +226,7 @@ class VectorStore:
         framework: str | None,
         component_category: str | None,
         section_type: str | None,
+        exclude_sections: list[str] | None = None,
     ) -> dict | None:
         """Build a ChromaDB where filter from optional parameters."""
         conditions = []
@@ -225,6 +236,9 @@ class VectorStore:
             conditions.append({"component_category": component_category})
         if section_type:
             conditions.append({"section_type": section_type})
+        if exclude_sections:
+            for sec in exclude_sections:
+                conditions.append({"section_type": {"$ne": sec}})
 
         if not conditions:
             return None

@@ -70,6 +70,13 @@ Resume works because the system saves SHA256 hashes after each file. On re-run, 
 ~/search.sh "animated loading spinner"
 ```
 
+### Search with full code output
+
+```bash
+# Show complete chunk code instead of 3-line preview
+~/search.sh "animated loader" --show-code
+```
+
 ### Search with filters
 
 ```bash
@@ -80,6 +87,9 @@ Resume works because the system saves SHA256 hashes after each file. On re-run, 
 
 # Get more results
 ~/search.sh "hero section" -n 15
+
+# Include <head> meta chunks (excluded by default to avoid boilerplate)
+~/search.sh "meta tags open graph" --include-head
 ```
 
 ### Understanding results
@@ -139,6 +149,16 @@ sudo systemctl status design-library-watcher
 ```bash
 sudo systemctl start design-library-reindex.timer
 sudo systemctl stop design-library-reindex.timer
+```
+
+### Reload after service file changes
+
+After editing `.service` files, reload systemd and restart:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart design-library-watcher
+sudo systemctl restart design-library-reindex.timer
 ```
 
 ### Enable/disable on boot
@@ -221,9 +241,36 @@ uptime
 └── .index/file_hashes.json     # Change tracking
 ```
 
+## Search Quality Tuning
+
+### Head-meta filtering
+
+HTML `<head>` boilerplate is indexed with `section_type="head-meta"` and **excluded from search results by default**. This prevents meta tags from dominating results at ~0.45 similarity. Use `--include-head` to include them when specifically searching for SEO/meta content.
+
+### Chunk size tuning
+
+Adjust `chunk_target_chars` in `indexer/config.py` to control granularity:
+- **Smaller** (e.g. 500) = more granular search, slower indexing
+- **Larger** (e.g. 1500) = faster indexing, broader matches
+- **Default**: 1000
+
+After changing config, run a full re-index:
+
+```bash
+cd /home/rpi/ai-engine/design-library-indexer
+pkill -f "run_indexer.py"
+nohup /home/rpi/ai-engine/venv/bin/python run_indexer.py index --full -v \
+  > /home/rpi/ai-engine/logs/full-index-$(date +%Y%m%d-%H%M%S).log 2>&1 &
+```
+
+### Adding new repos
+
+Drop git repos into `/mnt/design-library/example-websites/` — the watcher detects new files automatically (30s debounce). No manual re-index needed.
+
 ## Key Features
 
 - **Semantic search** - Find code by describing what you want
+- **Head-meta filtering** - Excludes HTML `<head>` boilerplate from search results by default
 - **Adaptive worker auto-tuning** - 40-70% faster indexing based on CPU/RAM/temperature
 - **Incremental indexing** - Only processes new or changed files
 - **Resume support** - Stop and restart anytime without losing progress
