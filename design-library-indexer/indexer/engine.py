@@ -82,17 +82,29 @@ class IndexerEngine:
             self.store.reset()
             self.store.initialize()
 
+        # ── Count files for progress tracking ──
+        logger.info("Scanning library to count indexable files...")
+        total_files = self.discovery.count_indexable_files(incremental=incremental)
+        logger.info(f"Found {total_files} files to index")
+        self._stats["total_files"] = total_files
+
         # ── Process files ──
         batch_ids: list[str] = []
         batch_embeddings: list[list[float]] = []
         batch_documents: list[str] = []
         batch_metadatas: list[dict] = []
+        progress_start = time.monotonic()
 
         for discovered_file in self.discovery.discover(incremental=incremental):
             self._process_file(
                 discovered_file,
                 batch_ids, batch_embeddings, batch_documents, batch_metadatas,
             )
+
+            # Log progress
+            processed = self._stats["files_processed"]
+            if total_files > 0 and processed % self.config.log_every_n_files == 0:
+                self._log_progress(processed, total_files, progress_start)
 
             # Flush batch when it hits the configured size
             if len(batch_ids) >= self.config.batch_size:
@@ -314,6 +326,32 @@ class IndexerEngine:
 
         with open(log_file, "a") as f:
             f.write(json.dumps(self._stats) + "\n")
+
+    def _log_progress(self, processed: int, total: int, start_time: float) -> None:
+        """Log indexing progress with percentage, counts, and ETA."""
+        pct = (processed / total) * 100
+        remaining = total - processed
+        elapsed = time.monotonic() - start_time
+
+        if processed > 0 and elapsed > 0:
+            rate = processed / elapsed  # files per second
+            eta_seconds = remaining / rate
+            # Format ETA as human-readable
+            if eta_seconds < 60:
+                eta_str = f"{eta_seconds:.0f}s"
+            elif eta_seconds < 3600:
+                eta_str = f"{eta_seconds / 60:.0f}m {eta_seconds % 60:.0f}s"
+            else:
+                hours = int(eta_seconds // 3600)
+                mins = int((eta_seconds % 3600) // 60)
+                eta_str = f"{hours}h {mins}m"
+        else:
+            eta_str = "calculating..."
+
+        logger.info(
+            f"Progress: {processed}/{total} files ({pct:.1f}%) │ "
+            f"{remaining} remaining │ ETA: {eta_str}"
+        )
 
     def _log_summary(self) -> None:
         """Log a human-readable summary of the indexing run."""

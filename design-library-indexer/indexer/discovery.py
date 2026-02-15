@@ -173,6 +173,59 @@ class FileDiscovery:
             f"skipped_name={stats['skipped_name']}, skipped_size={stats['skipped_size']}"
         )
 
+    def count_indexable_files(self, incremental: bool = True) -> int:
+        """
+        Fast pre-count of files that will be indexed.
+
+        Walks the same paths and applies the same filters as discover(),
+        but skips hashing to stay fast. For incremental runs, it hashes
+        to check against previous hashes (same cost as discover).
+        """
+        if incremental:
+            self.load_previous_hashes()
+
+        count = 0
+        for index_subdir in self.config.index_paths:
+            root_path = self.config.library_root / index_subdir
+            if not root_path.exists():
+                continue
+
+            for dirpath, dirnames, filenames in os.walk(root_path):
+                dirnames[:] = [
+                    d for d in dirnames
+                    if d not in self.config.skip_directories
+                ]
+
+                for filename in filenames:
+                    if filename in self.config.skip_filenames:
+                        continue
+
+                    ext = self._get_extension(filename)
+                    if ext in self.config.skip_extensions:
+                        continue
+
+                    if ext not in self.config.code_extensions:
+                        if not (ext in self.config.config_extensions and filename in self.config.config_filenames):
+                            continue
+
+                    filepath = Path(dirpath) / filename
+                    try:
+                        size = filepath.stat().st_size
+                    except OSError:
+                        continue
+                    if size > self.config.max_file_size_bytes or size == 0:
+                        continue
+
+                    if incremental:
+                        file_hash = self._hash_file(filepath)
+                        rel_path = str(filepath.relative_to(self.config.library_root))
+                        if self._previous_hashes.get(rel_path) == file_hash:
+                            continue
+
+                    count += 1
+
+        return count
+
     def get_deleted_files(self) -> list[str]:
         """Return relative paths of files that existed last run but are now gone."""
         previous_keys = set(self._previous_hashes.keys())
