@@ -8,10 +8,10 @@ Indexes your design library (HTML, CSS, JS, React, Vue, etc.) into a vector data
 
 ```bash
 # Find code by description
-~/search.sh "hero section with gradient background"
-~/search.sh "responsive navigation with dropdown"
-~/search.sh "animated loading spinner"
-~/search.sh "pricing table with three columns"
+./search.sh "hero section with gradient background"
+./search.sh "responsive navigation with dropdown"
+./search.sh "animated loading spinner"
+./search.sh "pricing table with three columns"
 ```
 
 ## Quick Start
@@ -67,29 +67,29 @@ Resume works because the system saves SHA256 hashes after each file. On re-run, 
 ### Basic search
 
 ```bash
-~/search.sh "animated loading spinner"
+./search.sh "animated loading spinner"
 ```
 
 ### Search with full code output
 
 ```bash
 # Show complete chunk code instead of 3-line preview
-~/search.sh "animated loader" --show-code
+./search.sh "animated loader" --show-code
 ```
 
 ### Search with filters
 
 ```bash
 # Filter by framework
-~/search.sh "card component with hover effect" --framework html
-~/search.sh "useState hook example" --framework react
-~/search.sh "loading animation keyframes" --framework css
+./search.sh "card component with hover effect" --framework html
+./search.sh "useState hook example" --framework react
+./search.sh "loading animation keyframes" --framework css
 
 # Get more results
-~/search.sh "hero section" -n 15
+./search.sh "hero section" -n 15
 
 # Include <head> meta chunks (excluded by default to avoid boilerplate)
-~/search.sh "meta tags open graph" --include-head
+./search.sh "meta tags open graph" --include-head
 ```
 
 ### Understanding results
@@ -125,13 +125,13 @@ cp /mnt/design-library/path/to/result.html ~/my-project/components/
 
 ```bash
 # Find HTML structure
-~/search.sh "pricing table markup" --framework html
+./search.sh "pricing table markup" --framework html
 
 # Find the CSS styling
-~/search.sh "pricing table styles" --framework css
+./search.sh "pricing table styles" --framework css
 
 # Find JavaScript behavior
-~/search.sh "pricing toggle monthly yearly" --framework javascript
+./search.sh "pricing toggle monthly yearly" --framework javascript
 ```
 
 ## Services
