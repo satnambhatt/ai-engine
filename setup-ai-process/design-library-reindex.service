@@ -8,6 +8,8 @@ Type=oneshot
 User=rpi
 Group=rpi
 WorkingDirectory=/home/rpi/ai-engine/design-library-indexer
+Environment="CHROMA_TELEMETRY=FALSE"
+Environment="ANONYMIZED_TELEMETRY=FALSE"
 ExecStart=/home/rpi/ai-engine/venv/bin/python run_indexer.py index --full
 StandardOutput=append:/home/rpi/ai-engine/logs/reindex.log
 StandardError=append:/home/rpi/ai-engine/logs/reindex-error.log

@@ -101,7 +101,7 @@ class Chunker:
             chunks.append(Chunk(
                 text=head_match.group(0),
                 chunk_index=0, total_chunks=0,
-                section_type="head",
+                section_type="head-meta",
                 start_line=content[:head_match.start()].count("\n") + 1,
                 end_line=content[:head_match.end()].count("\n") + 1,
             ))
@@ -138,9 +138,24 @@ class Chunker:
                 end_line=start_line + section.count("\n"),
             ))
 
-        # If no semantic sections found, fall back to full body
-        if len(chunks) <= 1:  # only head or nothing
-            return self._chunk_fallback(content)
+        # If no semantic sections found (only head or nothing), extract
+        # <body> content as a "component" chunk instead of falling back to
+        # _chunk_fallback which would chunk the entire file including <head>.
+        # This fixes HyperUI-style files where <body> contains only a <div>
+        # without <header>/<section>/<main> wrappers.
+        if len(chunks) <= 1:
+            if body_match and body_match.group(1).strip():
+                body_text = body_match.group(0)  # full <body>...</body>
+                body_start = content[:body_match.start()].count("\n") + 1
+                chunks.append(Chunk(
+                    text=body_text,
+                    chunk_index=0, total_chunks=0,
+                    section_type="component",
+                    start_line=body_start,
+                    end_line=body_start + body_text.count("\n"),
+                ))
+            else:
+                return self._chunk_fallback(content)
 
         return chunks
 
