@@ -191,6 +191,18 @@ pkill -f "run_indexer.py"
 cd /home/rpi/ai-engine/design-library-indexer
 nohup /home/rpi/ai-engine/venv/bin/python run_indexer.py index -v \
   > /home/rpi/ai-engine/logs/index-resume-$(date +%Y%m%d-%H%M%S).log 2>&1 &
+
+# 1. Kill the old RAG API
+pkill -f "uvicorn main:app"
+
+# 2. Start the new RAG API with increased timeout
+cd /home/rpi/ai-engine/rag-api
+nohup /home/rpi/ai-engine/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 \
+  > /home/rpi/ai-engine/logs/rag-api.log 2>&1 &
+
+# 3. Copy the updated nginx config and reload
+sudo cp /home/rpi/ai-engine/setup-ai-process/nginx-ai-engine.conf /etc/nginx/sites-available/ai-engine
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
 Resume works because the system saves SHA256 hashes after each file. On re-run, it skips already-indexed files.

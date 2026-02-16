@@ -294,9 +294,15 @@ async def generate(req: GenerateRequest):
     )
 
     if llm_result.get("error"):
+        error_msg = llm_result['error']
+        if "timeout" in error_msg.lower():
+            raise HTTPException(
+                status_code=504,
+                detail=f"Code generation timed out after {llm_result.get('duration_ms', 0) / 1000:.0f}s. Try a simpler brief or reduce n_context.",
+            )
         raise HTTPException(
-            status_code=502,
-            detail=f"LLM generation failed: {llm_result['error']}",
+            status_code=500,
+            detail=f"LLM generation failed: {error_msg}",
         )
 
     duration_ms = int((time.monotonic() - start) * 1000)

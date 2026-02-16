@@ -19,7 +19,7 @@ class OllamaChat:
         self,
         base_url: str = "http://localhost:11434",
         model: str = "qwen2.5-coder:3b",
-        timeout: int = 600,
+        timeout: int = 1200,
     ):
         self.base_url = base_url.rstrip("/")
         self.model = model
