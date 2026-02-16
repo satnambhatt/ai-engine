@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Design Library RAG</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header class="app-header">
+        <h1 class="logo">Design Library <span class="logo-accent">RAG</span></h1>
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="search">Search</button>
+            <button class="tab-btn" data-tab="generate">Generate</button>
+            <button class="tab-btn" data-tab="templates">Templates</button>
+            <button class="tab-btn" data-tab="seo">SEO Audit</button>
+        </nav>
+        <div class="health-indicator" id="health-indicator" title="API Status">
+            <span class="health-dot"></span>
+            <span class="health-text">Checking...</span>
+        </div>
+    </header>
+
+    <main class="app-main">
+        <!-- ── Search Tab ─────────────────────────────────────────── -->
+        <section class="tab-panel active" id="tab-search">
+            <form class="search-form" id="search-form">
+                <div class="input-row">
+                    <input type="text" id="search-query" placeholder="Search the design library... (e.g. hero section with gradient)" required>
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+                <div class="filter-row">
+                    <select id="search-framework">
+                        <option value="">Any framework</option>
+                        <option value="html">HTML</option>
+                        <option value="react">React</option>
+                        <option value="vue">Vue</option>
+                        <option value="svelte">Svelte</option>
+                        <option value="astro">Astro</option>
+                        <option value="css">CSS</option>
+                    </select>
+                    <select id="search-category">
+                        <option value="">Any category</option>
+                        <option value="hero">Hero</option>
+                        <option value="header">Header</option>
+                        <option value="footer">Footer</option>
+                        <option value="navigation">Navigation</option>
+                        <option value="card">Card</option>
+                        <option value="pricing">Pricing</option>
+                        <option value="testimonial">Testimonial</option>
+                        <option value="contact">Contact</option>
+                        <option value="cta">CTA</option>
+                        <option value="faq">FAQ</option>
+                        <option value="form">Form</option>
+                        <option value="table">Table</option>
+                        <option value="gallery">Gallery</option>
+                        <option value="modal">Modal</option>
+                        <option value="sidebar">Sidebar</option>
+                        <option value="404">404</option>
+                    </select>
+                    <select id="search-n-results">
+                        <option value="5">5 results</option>
+                        <option value="10">10 results</option>
+                        <option value="20">20 results</option>
+                    </select>
+                </div>
+            </form>
+            <div class="results-meta" id="search-meta"></div>
+            <div class="results-list" id="search-results"></div>
+        </section>
+
+        <!-- ── Generate Tab ───────────────────────────────────────── -->
+        <section class="tab-panel" id="tab-generate">
+            <form class="generate-form" id="generate-form">
+                <textarea id="generate-brief" rows="3" placeholder="Describe what you want to generate... (e.g. A hero section for a SaaS landing page with a signup CTA button)" required></textarea>
+                <div class="filter-row">
+                    <select id="generate-task">
+                        <option value="component">Component</option>
+                        <option value="hero">Hero Section</option>
+                        <option value="page">Full Page</option>
+                        <option value="seo_rewrite">SEO Rewrite</option>
+                    </select>
+                    <select id="generate-framework">
+                        <option value="">Any framework</option>
+                        <option value="html">HTML</option>
+                        <option value="react">React</option>
+                        <option value="vue">Vue</option>
+                        <option value="css">CSS</option>
+                    </select>
+                    <select id="generate-context">
+                        <option value="3">3 context chunks</option>
+                        <option value="1">1 context chunk</option>
+                        <option value="5">5 context chunks</option>
+                        <option value="0">No context (raw LLM)</option>
+                    </select>
+                    <button type="submit" class="btn btn-primary">Generate</button>
+                </div>
+            </form>
+            <div class="generate-status" id="generate-status"></div>
+            <div class="generate-output" id="generate-output"></div>
+        </section>
+
+        <!-- ── Templates Tab ──────────────────────────────────────── -->
+        <section class="tab-panel" id="tab-templates">
+            <div class="filter-row">
+                <select id="templates-category">
+                    <option value="hero">Hero</option>
+                    <option value="header">Header</option>
+                    <option value="footer">Footer</option>
+                    <option value="navigation">Navigation</option>
+                    <option value="card">Card</option>
+                    <option value="pricing">Pricing</option>
+                    <option value="testimonial">Testimonial</option>
+                    <option value="contact">Contact</option>
+                    <option value="cta">CTA</option>
+                    <option value="faq">FAQ</option>
+                    <option value="form">Form</option>
+                    <option value="table">Table</option>
+                    <option value="gallery">Gallery</option>
+                    <option value="modal">Modal</option>
+                    <option value="sidebar">Sidebar</option>
+                    <option value="404">404</option>
+                </select>
+                <button type="button" class="btn btn-primary" id="templates-load">Browse</button>
+            </div>
+            <div class="results-meta" id="templates-meta"></div>
+            <div class="templates-grid" id="templates-grid"></div>
+        </section>
+
+        <!-- ── SEO Audit Tab ──────────────────────────────────────── -->
+        <section class="tab-panel" id="tab-seo">
+            <form class="seo-form" id="seo-form">
+                <textarea id="seo-html" rows="10" placeholder="Paste your HTML here to audit for SEO issues..." required></textarea>
+                <button type="submit" class="btn btn-primary">Run Audit</button>
+            </form>
+            <div class="seo-results" id="seo-results"></div>
+        </section>
+    </main>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>
