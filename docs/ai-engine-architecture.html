@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Engine — System Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0c10;
+  --bg-card: #12151c;
+  --bg-card-hover: #181c25;
+  --bg-surface: #1a1e28;
+  --border: #252a36;
+  --border-bright: #333a4a;
+  --text: #c9cdd6;
+  --text-dim: #6b7280;
+  --text-bright: #e8ecf2;
+  --accent-blue: #5b8def;
+  --accent-cyan: #38bdf8;
+  --accent-green: #34d399;
+  --accent-amber: #fbbf24;
+  --accent-red: #f87171;
+  --accent-purple: #a78bfa;
+  --accent-pink: #f472b6;
+  --glow-blue: rgba(91,141,239,0.08);
+  --glow-green: rgba(52,211,153,0.08);
+  --glow-amber: rgba(251,191,36,0.08);
+  --glow-purple: rgba(167,139,250,0.08);
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans: 'DM Sans', -apple-system, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wrapper {
+  position: relative;
+  z-index: 1;
+  max-width: 1340px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+/* ── Header ─────────────────────── */
+.masthead {
+  text-align: center;
+  margin-bottom: 2.5rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+.masthead h1 {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  letter-spacing: -0.03em;
+  color: var(--text-bright);
+  margin-bottom: 0.3rem;
+}
+.masthead h1 .hl { color: var(--accent-blue); }
+.masthead .subtitle {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+.meta-row {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+.meta-tag {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.meta-tag .val { color: var(--accent-cyan); }
+
+/* ── Section Headers ────────────── */
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-dim);
+  margin-bottom: 1rem;
+  padding-left: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── Layer Grids ────────────────── */
+.layer { margin-bottom: 2rem; }
+.layer-grid { display: grid; gap: 0.75rem; }
+.grid-2 { grid-template-columns: 1fr 1fr; }
+.grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+.grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+/* ── Cards ──────────────────────── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem;
+  position: relative;
+  transition: border-color 0.2s, background 0.2s, transform 0.15s;
+}
+.card:hover {
+  border-color: var(--border-bright);
+  background: var(--bg-card-hover);
+  transform: translateY(-1px);
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+.card-icon {
+  font-size: 0.85rem;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.card-title {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-bright);
+  letter-spacing: -0.01em;
+}
+.card-file {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  margin-top: -0.15rem;
+  letter-spacing: 0.02em;
+}
+.card-body {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  line-height: 1.55;
+}
+.card-body ul { list-style: none; margin-top: 0.4rem; }
+.card-body li {
+  padding: 0.15rem 0;
+  padding-left: 0.85rem;
+  position: relative;
+}
+.card-body li::before {
+  content: '›';
+  position: absolute;
+  left: 0;
+  color: var(--accent-blue);
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+.card-tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 2px;
+  border: 1px solid;
+  margin-top: 0.5rem;
+  letter-spacing: 0.02em;
+}
+
+/* Color variants */
+.blue .card-icon { background: var(--glow-blue); color: var(--accent-blue); }
+.blue .card-tag { border-color: rgba(91,141,239,0.3); color: var(--accent-blue); background: var(--glow-blue); }
+.blue.card { border-left: 2px solid rgba(91,141,239,0.4); }
+
+.green .card-icon { background: var(--glow-green); color: var(--accent-green); }
+.green .card-tag { border-color: rgba(52,211,153,0.3); color: var(--accent-green); background: var(--glow-green); }
+.green.card { border-left: 2px solid rgba(52,211,153,0.4); }
+
+.amber .card-icon { background: var(--glow-amber); color: var(--accent-amber); }
+.amber .card-tag { border-color: rgba(251,191,36,0.3); color: var(--accent-amber); background: var(--glow-amber); }
+.amber.card { border-left: 2px solid rgba(251,191,36,0.4); }
+
+.purple .card-icon { background: var(--glow-purple); color: var(--accent-purple); }
+.purple .card-tag { border-color: rgba(167,139,250,0.3); color: var(--accent-purple); background: var(--glow-purple); }
+.purple.card { border-left: 2px solid rgba(167,139,250,0.4); }
+
+.red .card-icon { background: rgba(248,113,113,0.08); color: var(--accent-red); }
+.red .card-tag { border-color: rgba(248,113,113,0.3); color: var(--accent-red); background: rgba(248,113,113,0.08); }
+.red.card { border-left: 2px solid rgba(248,113,113,0.4); }
+
+.pink .card-icon { background: rgba(244,114,182,0.08); color: var(--accent-pink); }
+.pink .card-tag { border-color: rgba(244,114,182,0.3); color: var(--accent-pink); background: rgba(244,114,182,0.08); }
+.pink.card { border-left: 2px solid rgba(244,114,182,0.4); }
+
+.cyan .card-icon { background: rgba(56,189,248,0.08); color: var(--accent-cyan); }
+.cyan .card-tag { border-color: rgba(56,189,248,0.3); color: var(--accent-cyan); background: rgba(56,189,248,0.08); }
+.cyan.card { border-left: 2px solid rgba(56,189,248,0.4); }
+
+/* ── Pipeline Flow ────────────── */
+.pipeline-flow {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin: 0.5rem 0;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+.pipeline-step {
+  flex: 1;
+  min-width: 130px;
+  padding: 0.7rem 0.6rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  text-align: center;
+  position: relative;
+}
+.pipeline-step:first-child { border-radius: 6px 0 0 6px; }
+.pipeline-step:last-child { border-radius: 0 6px 6px 0; }
+.pipeline-step:not(:last-child)::after {
+  content: '→';
+  position: absolute;
+  right: -0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--accent-blue);
+  z-index: 2;
+  opacity: 0.5;
+}
+.pipeline-step .step-icon { font-size: 1rem; margin-bottom: 0.25rem; }
+.pipeline-step .step-name {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-bright);
+}
+.pipeline-step .step-detail {
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  margin-top: 0.15rem;
+}
+
+/* ══════════════════════════════════
+   WIRING DIAGRAM — Component Linkage
+   ══════════════════════════════════ */
+.wiring-container {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  overflow: hidden;
+}
+
+.wiring-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(91,141,239,0.03) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(52,211,153,0.03) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.wiring-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ── Wiring legend ──────────────── */
+.wiring-legend {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-dim);
+}
+.legend-line {
+  width: 28px;
+  height: 2px;
+  border-radius: 1px;
+}
+.legend-line.imports { background: var(--accent-blue); }
+.legend-line.http { background: var(--accent-green); border-style: dashed; height: 0; border-top: 2px dashed var(--accent-green); }
+.legend-line.spawns { background: var(--accent-amber); border-style: dashed; height: 0; border-top: 2px dashed var(--accent-amber); }
+.legend-line.reads { background: var(--accent-purple); opacity: 0.6; }
+.legend-line.proxies { background: var(--accent-pink); border-style: dashed; height: 0; border-top: 2px dashed var(--accent-pink); }
+
+/* ── Responsive ────────────────── */
+@media (max-width: 900px) {
+  .grid-4 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: 1fr; }
+  .pipeline-flow { flex-wrap: wrap; }
+  .pipeline-step { min-width: 45%; border-radius: 4px !important; }
+  .pipeline-step:not(:last-child)::after { display: none; }
+}
+@media (max-width: 600px) {
+  .grid-2, .grid-4 { grid-template-columns: 1fr; }
+  .wrapper { padding: 1rem 0.75rem 2rem; }
+}
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+<!-- ═══ Header ═══ -->
+<header class="masthead">
+  <h1><span class="hl">ai-engine</span> · system architecture</h1>
+  <div class="subtitle">Local RAG pipeline for web design files — Raspberry Pi 4/5 + Ollama + ChromaDB</div>
+  <div class="meta-row">
+    <span class="meta-tag">hardware <span class="val">Raspberry Pi</span></span>
+    <span class="meta-tag">storage <span class="val">500GB USB SSD</span></span>
+    <span class="meta-tag">embeddings <span class="val">nomic-embed-text</span></span>
+    <span class="meta-tag">llm <span class="val">qwen2.5-coder:3b</span></span>
+    <span class="meta-tag">vectors <span class="val">ChromaDB + HNSW</span></span>
+    <span class="meta-tag">modules <span class="val">3906 LOC · 17 files</span></span>
+  </div>
+</header>
+
+<!-- ═══ Indexing Pipeline Flow ═══ -->
+<div class="layer">
+  <div class="section-label">Indexing Pipeline — data flow</div>
+  <div class="pipeline-flow">
+    <div class="pipeline-step">
+      <div class="step-icon">📂</div>
+      <div class="step-name">Discovery</div>
+      <div class="step-detail">Walk /mnt/design-library<br>SHA256 change detect</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-icon">✂️</div>
+      <div class="step-name">Chunker</div>
+      <div class="step-detail">AST-aware split<br>7 language strategies</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-icon">🔡</div>
+      <div class="step-name">Embeddings</div>
+      <div class="step-detail">Ollama nomic-embed-text<br>768-dim vectors</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-icon">💾</div>
+      <div class="step-name">Vector Store</div>
+      <div class="step-detail">ChromaDB + HNSW<br>cosine similarity</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-icon">🔍</div>
+      <div class="step-name">Search / RAG</div>
+      <div class="step-detail">Semantic query<br>head-meta exclusion</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-icon">🤖</div>
+      <div class="step-name">Generate</div>
+      <div class="step-detail">qwen2.5-coder:3b<br>context-injected output</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ COMPONENT LINKAGE DIAGRAM ═══ -->
+<div class="layer">
+  <div class="section-label">Component Linkage — how files connect</div>
+  <div class="wiring-container">
+    <svg class="wiring-svg" viewBox="0 0 1280 820" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- Arrow markers -->
+        <marker id="arr-blue" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto"><polygon points="0 0, 6 2.5, 0 5" fill="#5b8def" opacity="0.7"/></marker>
+        <marker id="arr-green" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto"><polygon points="0 0, 6 2.5, 0 5" fill="#34d399" opacity="0.7"/></marker>
+        <marker id="arr-amber" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto"><polygon points="0 0, 6 2.5, 0 5" fill="#fbbf24" opacity="0.7"/></marker>
+        <marker id="arr-purple" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto"><polygon points="0 0, 6 2.5, 0 5" fill="#a78bfa" opacity="0.6"/></marker>
+        <marker id="arr-pink" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto"><polygon points="0 0, 6 2.5, 0 5" fill="#f472b6" opacity="0.7"/></marker>
+
+        <!-- Glow filter -->
+        <filter id="glow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+
+      <!-- ═══ ROW LABELS ═══ -->
+      <text x="16" y="40" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="9" letter-spacing="0.15em" text-transform="uppercase">ENTRY POINTS</text>
+      <text x="16" y="238" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="9" letter-spacing="0.15em">CORE INDEXER</text>
+      <text x="16" y="450" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="9" letter-spacing="0.15em">SUPPORT / AI</text>
+      <text x="16" y="620" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="9" letter-spacing="0.15em">INFRASTRUCTURE</text>
+
+      <!-- ═══ ROW 1: ENTRY POINTS ═══ -->
+      <!-- run_indexer.py -->
+      <rect x="50" y="58" width="175" height="56" rx="5" fill="#12151c" stroke="#38bdf8" stroke-opacity="0.35"/>
+      <text x="137" y="82" text-anchor="middle" fill="#e8ecf2" font-family="JetBrains Mono, monospace" font-size="10.5" font-weight="600">run_indexer.py</text>
+      <text x="137" y="104" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="8">CLI · 289 LOC</text>
+
+      <!-- watch_library.py -->
+      <rect x="275" y="58" width="175" height="56" rx="5" fill="#12151c" stroke="#38bdf8" stroke-opacity="0.35"/>
+      <text x="362" y="82" text-anchor="middle" fill="#e8ecf2" font-family="JetBrains Mono, monospace" font-size="10.5" font-weight="600">watch_library.py</text>
+      <text x="362" y="104" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="8">File watcher · 149 LOC</text>
+
+      <!-- rag-api/main.py -->
+      <rect x="500" y="58" width="175" height="56" rx="5" fill="#12151c" stroke="#34d399" stroke-opacity="0.35"/>
+      <text x="587" y="82" text-anchor="middle" fill="#e8ecf2" font-family="JetBrains Mono, monospace" font-size="10.5" font-weight="600">rag-api/main.py</text>
+      <text x="587" y="104" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="8">FastAPI · 387 LOC</text>
+
+      <!-- mcp-server/server.py -->
+      <rect x="725" y="58" width="185" height="56" rx="5" fill="#12151c" stroke="#a78bfa" stroke-opacity="0.35"/>
+      <text x="817" y="82" text-anchor="middle" fill="#e8ecf2" font-family="JetBrains Mono, monospace" font-size="10.5" font-weight="600">mcp-server/server.py</text>
+      <text x="817" y="104" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="8">MCP stdio · 300 LOC</text>
+
+      <!-- frontend/ -->
+      <rect x="960" y="58" width="175" height="56" rx="5" fill="#12151c" stroke="#f472b6" stroke-opacity="0.35"/>
+      <text x="1047" y="82" text-anchor="middle" fill="#e8ecf2" font-family="JetBrains Mono, monospace" font-size="10.5" font-weight="600">frontend/</text>
+      <text x="1047" y="104" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="8">HTML + CSS + JS</text>
+
+      <!-- ═══ ROW 2: CORE INDEXER ═══ -->
+      <!-- config.py -->
+      <rect x="50" y="256" width="155" height="56" rx="5" fill="#12151c" stroke="#5b8def" stroke-opacity="0.35"/>
+      <text x="127" y="280" text-anchor="middle" fill="#e8ecf2" font-family="JetBrains Mono, monospace" font-size="10.5" font-weight="600">config.py</text>
+      <text x="127" y="302" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="8">@dataclass · 110 LOC</text>
+
+      <!-- engine.py -->
+      <rect x="245" y="256" width="155" height="56" rx="5" fill="#12151c" stroke="#5b8def" stroke-opacity="0.35"/>
+      <text x="322" y="280" text-anchor="middle" fill="#e8ecf2" font-family="JetBrains Mono, monospace" font-size="10.5" font-weight="600">engine.py</text>
+      <text x="322" y="302" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="8">Orchestrator · 377 LOC</text>
+
+      <!-- discovery.py -->
+      <rect x="440" y="256" width="155" height="56" rx="5" fill="#12151c" stroke="#5b8def" stroke-opacity="0.35"/>
+      <text x="517" y="280" text-anchor="middle" fill="#e8ecf2" font-family="JetBrains Mono, monospace" font-size="10.5" font-weight="600">discovery.py</text>
+      <text x="517" y="302" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="8">File walker · 333 LOC</text>
+
+      <!-- chunker.py -->
+      <rect x="635" y="256" width="155" height="56" rx="5" fill="#12151c" stroke="#5b8def" stroke-opacity="0.35"/>
+      <text x="712" y="280" text-anchor="middle" fill="#e8ecf2" font-family="JetBrains Mono, monospace" font-size="10.5" font-weight="600">chunker.py</text>
+      <text x="712" y="302" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="8">AST splitter · 458 LOC</text>
+
+      <!-- embeddings.py -->
+      <rect x="830" y="256" width="155" height="56" rx="5" fill="#12151c" stroke="#5b8def" stroke-opacity="0.35"/>
+      <text x="907" y="280" text-anchor="middle" fill="#e8ecf2" font-family="JetBrains Mono, monospace" font-size="10.5" font-weight="600">embeddings.py</text>
+      <text x="907" y="302" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="8">Ollama embed · 149 LOC</text>
+
+      <!-- store.py -->
+      <rect x="1025" y="256" width="155" height="56" rx="5" fill="#12151c" stroke="#5b8def" stroke-opacity="0.35"/>
+      <text x="1102" y="280" text-anchor="middle" fill="#e8ecf2" font-family="JetBrains Mono, monospace" font-size="10.5" font-weight="600">store.py</text>
+      <text x="1102" y="302" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="8">ChromaDB · 247 LOC</text>
+
+      <!-- ═══ ROW 3: SUPPORT / AI ═══ -->
+      <!-- autotune.py -->
+      <rect x="50" y="468" width="175" height="56" rx="5" fill="#12151c" stroke="#fbbf24" stroke-opacity="0.35"/>
+      <text x="137" y="492" text-anchor="middle" fill="#e8ecf2" font-family="JetBrains Mono, monospace" font-size="10.5" font-weight="600">autotune.py</text>
+      <text x="137" y="514" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="8">Worker tuning · 199 LOC</text>
+
+      <!-- llm.py -->
+      <rect x="275" y="468" width="175" height="56" rx="5" fill="#12151c" stroke="#34d399" stroke-opacity="0.35"/>
+      <text x="362" y="492" text-anchor="middle" fill="#e8ecf2" font-family="JetBrains Mono, monospace" font-size="10.5" font-weight="600">rag-api/llm.py</text>
+      <text x="362" y="514" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="8">Ollama chat · 124 LOC</text>
+
+      <!-- prompts.py -->
+      <rect x="500" y="468" width="175" height="56" rx="5" fill="#12151c" stroke="#34d399" stroke-opacity="0.35"/>
+      <text x="587" y="492" text-anchor="middle" fill="#e8ecf2" font-family="JetBrains Mono, monospace" font-size="10.5" font-weight="600">rag-api/prompts.py</text>
+      <text x="587" y="514" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="8">Prompt eng · 146 LOC</text>
+
+      <!-- seo.py -->
+      <rect x="725" y="468" width="175" height="56" rx="5" fill="#12151c" stroke="#34d399" stroke-opacity="0.35"/>
+      <text x="812" y="492" text-anchor="middle" fill="#e8ecf2" font-family="JetBrains Mono, monospace" font-size="10.5" font-weight="600">rag-api/seo.py</text>
+      <text x="812" y="514" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="8">SEO audit · 244 LOC</text>
+
+      <!-- test_pipeline.py -->
+      <rect x="950" y="468" width="175" height="56" rx="5" fill="#12151c" stroke="#34d399" stroke-opacity="0.25"/>
+      <text x="1037" y="492" text-anchor="middle" fill="#9197a6" font-family="JetBrains Mono, monospace" font-size="10.5" font-weight="600">test_pipeline.py</text>
+      <text x="1037" y="514" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="8">E2E test · 329 LOC</text>
+
+      <!-- ═══ ROW 4: INFRASTRUCTURE ═══ -->
+      <!-- systemd watcher -->
+      <rect x="50" y="638" width="195" height="56" rx="5" fill="#12151c" stroke="#f87171" stroke-opacity="0.3"/>
+      <text x="147" y="662" text-anchor="middle" fill="#e8ecf2" font-family="JetBrains Mono, monospace" font-size="9.5" font-weight="600">watcher.service</text>
+      <text x="147" y="682" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="7.5">systemd · CPUQuota=50%</text>
+
+      <!-- systemd reindex -->
+      <rect x="285" y="638" width="195" height="56" rx="5" fill="#12151c" stroke="#f87171" stroke-opacity="0.3"/>
+      <text x="382" y="662" text-anchor="middle" fill="#e8ecf2" font-family="JetBrains Mono, monospace" font-size="9.5" font-weight="600">reindex.service + .timer</text>
+      <text x="382" y="682" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="7.5">systemd · nightly 02:00</text>
+
+      <!-- nginx -->
+      <rect x="520" y="638" width="195" height="56" rx="5" fill="#12151c" stroke="#f87171" stroke-opacity="0.3"/>
+      <text x="617" y="662" text-anchor="middle" fill="#e8ecf2" font-family="JetBrains Mono, monospace" font-size="9.5" font-weight="600">nginx-ai-engine.conf</text>
+      <text x="617" y="682" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="7.5">reverse proxy · :80 → :8000</text>
+
+      <!-- Ollama -->
+      <rect x="755" y="638" width="155" height="56" rx="5" fill="#12151c" stroke="#fbbf24" stroke-opacity="0.3"/>
+      <text x="832" y="662" text-anchor="middle" fill="#e8ecf2" font-family="JetBrains Mono, monospace" font-size="9.5" font-weight="600">Ollama</text>
+      <text x="832" y="682" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="7.5">:11434 · embed + chat</text>
+
+      <!-- USB SSD -->
+      <rect x="950" y="638" width="195" height="56" rx="5" fill="#12151c" stroke="#a78bfa" stroke-opacity="0.3"/>
+      <text x="1047" y="662" text-anchor="middle" fill="#e8ecf2" font-family="JetBrains Mono, monospace" font-size="9.5" font-weight="600">/mnt/design-library</text>
+      <text x="1047" y="682" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="7.5">500GB USB SSD · ext4</text>
+
+      <!-- ═══════════════════════════════
+           CONNECTION LINES (imports / calls)
+           ═══════════════════════════════ -->
+
+      <!-- ── BLUE: Python imports (from X import Y) ── -->
+      <!-- run_indexer → config -->
+      <path d="M137,114 L137,155 L127,155 L127,256" fill="none" stroke="#5b8def" stroke-width="1.3" stroke-opacity="0.5" marker-end="url(#arr-blue)"/>
+      <!-- run_indexer → engine -->
+      <path d="M160,114 L160,170 L322,170 L322,256" fill="none" stroke="#5b8def" stroke-width="1.3" stroke-opacity="0.5" marker-end="url(#arr-blue)"/>
+      <!-- run_indexer → embeddings -->
+      <path d="M190,114 L190,185 L907,185 L907,256" fill="none" stroke="#5b8def" stroke-width="1.3" stroke-opacity="0.35" marker-end="url(#arr-blue)"/>
+      <!-- run_indexer → store -->
+      <path d="M210,114 L210,195 L1102,195 L1102,256" fill="none" stroke="#5b8def" stroke-width="1.3" stroke-opacity="0.35" marker-end="url(#arr-blue)"/>
+
+      <!-- watch_library → config -->
+      <path d="M320,114 L320,145 L127,145 L127,254" fill="none" stroke="#5b8def" stroke-width="1.3" stroke-opacity="0.4" marker-end="url(#arr-blue)"/>
+      <!-- watch_library → engine -->
+      <path d="M362,114 L362,160 L322,160 L322,254" fill="none" stroke="#5b8def" stroke-width="1.3" stroke-opacity="0.5" marker-end="url(#arr-blue)"/>
+
+      <!-- rag-api/main → config -->
+      <path d="M540,114 L540,205 L127,205 L127,256" fill="none" stroke="#5b8def" stroke-width="1.3" stroke-opacity="0.3" marker-end="url(#arr-blue)"/>
+      <!-- rag-api/main → embeddings -->
+      <path d="M570,114 L570,210 L907,210 L907,256" fill="none" stroke="#5b8def" stroke-width="1.3" stroke-opacity="0.35" marker-end="url(#arr-blue)"/>
+      <!-- rag-api/main → store -->
+      <path d="M600,114 L600,220 L1102,220 L1102,256" fill="none" stroke="#5b8def" stroke-width="1.3" stroke-opacity="0.35" marker-end="url(#arr-blue)"/>
+      <!-- rag-api/main → llm -->
+      <path d="M555,114 L555,380 L362,380 L362,468" fill="none" stroke="#5b8def" stroke-width="1.3" stroke-opacity="0.4" marker-end="url(#arr-blue)"/>
+      <!-- rag-api/main → prompts -->
+      <path d="M587,114 L587,400 L587,468" fill="none" stroke="#5b8def" stroke-width="1.3" stroke-opacity="0.4" marker-end="url(#arr-blue)"/>
+      <!-- rag-api/main → seo -->
+      <path d="M625,114 L625,390 L812,390 L812,468" fill="none" stroke="#5b8def" stroke-width="1.3" stroke-opacity="0.4" marker-end="url(#arr-blue)"/>
+
+      <!-- engine → ALL core modules -->
+      <!-- engine → discovery -->
+      <path d="M380,284 L410,284 L440,284" fill="none" stroke="#5b8def" stroke-width="1.5" stroke-opacity="0.6" marker-end="url(#arr-blue)"/>
+      <!-- engine → chunker -->
+      <path d="M400,284 L400,340 L712,340 L712,312" fill="none" stroke="#5b8def" stroke-width="1.5" stroke-opacity="0.6" marker-end="url(#arr-blue)"/>
+      <!-- engine → embeddings -->
+      <path d="M400,284 L400,350 L907,350 L907,312" fill="none" stroke="#5b8def" stroke-width="1.5" stroke-opacity="0.6" marker-end="url(#arr-blue)"/>
+      <!-- engine → store -->
+      <path d="M400,284 L400,360 L1102,360 L1102,312" fill="none" stroke="#5b8def" stroke-width="1.5" stroke-opacity="0.6" marker-end="url(#arr-blue)"/>
+      <!-- engine → config -->
+      <path d="M245,284 L205,284" fill="none" stroke="#5b8def" stroke-width="1.5" stroke-opacity="0.6" marker-end="url(#arr-blue)"/>
+      <!-- engine → autotune -->
+      <path d="M295,312 L295,420 L137,420 L137,468" fill="none" stroke="#5b8def" stroke-width="1.3" stroke-opacity="0.5" marker-end="url(#arr-blue)"/>
+
+      <!-- discovery → config -->
+      <path d="M440,290 L220,290 L205,290" fill="none" stroke="#5b8def" stroke-width="1.2" stroke-opacity="0.35" marker-end="url(#arr-blue)"/>
+      <!-- chunker → config -->
+      <path d="M635,295 L210,295 L205,295" fill="none" stroke="#5b8def" stroke-width="1.2" stroke-opacity="0.3" marker-end="url(#arr-blue)"/>
+      <!-- embeddings → config -->
+      <path d="M830,295 L215,295 L205,295" fill="none" stroke="#5b8def" stroke-width="1.2" stroke-opacity="0.25" marker-end="url(#arr-blue)"/>
+      <!-- store → config -->
+      <path d="M1025,295 L218,295 L205,295" fill="none" stroke="#5b8def" stroke-width="1.2" stroke-opacity="0.22" marker-end="url(#arr-blue)"/>
+
+      <!-- ── GREEN DASHED: HTTP calls ── -->
+      <!-- mcp-server → rag-api (HTTP) -->
+      <path d="M725,86 L675,86" fill="none" stroke="#34d399" stroke-width="1.5" stroke-opacity="0.6" stroke-dasharray="5,3" marker-end="url(#arr-green)"/>
+      <text x="700" y="78" text-anchor="middle" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="7" opacity="0.7">HTTP</text>
+
+      <!-- frontend → rag-api (via nginx) -->
+      <path d="M960,86 L690,86" fill="none" stroke="#34d399" stroke-width="1.3" stroke-opacity="0.4" stroke-dasharray="5,3" marker-end="url(#arr-green)"/>
+      <text x="825" y="78" text-anchor="middle" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="7" opacity="0.6">/api/*</text>
+
+      <!-- embeddings → Ollama (HTTP) -->
+      <path d="M907,312 L907,580 L832,580 L832,638" fill="none" stroke="#34d399" stroke-width="1.3" stroke-opacity="0.5" stroke-dasharray="5,3" marker-end="url(#arr-green)"/>
+      <!-- llm → Ollama (HTTP) -->
+      <path d="M362,524 L362,570 L832,570 L832,636" fill="none" stroke="#34d399" stroke-width="1.3" stroke-opacity="0.5" stroke-dasharray="5,3" marker-end="url(#arr-green)"/>
+
+      <!-- ── AMBER DASHED: systemd spawns process ── -->
+      <!-- watcher.service → watch_library.py -->
+      <path d="M147,638 L147,590 L362,590 L362,524" fill="none" stroke="#fbbf24" stroke-width="1.3" stroke-opacity="0.4" stroke-dasharray="5,3" marker-end="url(#arr-amber)"/>
+      <text x="250" y="584" text-anchor="middle" fill="#fbbf24" font-family="JetBrains Mono, monospace" font-size="7" opacity="0.6">ExecStart</text>
+
+      <!-- reindex.service → run_indexer.py -->
+      <path d="M382,638 L382,600 L137,600 L137,114" fill="none" stroke="#fbbf24" stroke-width="1.3" stroke-opacity="0.4" stroke-dasharray="5,3" marker-end="url(#arr-amber)"/>
+      <text x="260" y="610" text-anchor="middle" fill="#fbbf24" font-family="JetBrains Mono, monospace" font-size="7" opacity="0.6">ExecStart --full</text>
+
+      <!-- ── PINK DASHED: nginx proxies ── -->
+      <!-- nginx → frontend (static) -->
+      <path d="M660,666 L925,666 L925,550 L1047,550 L1047,114" fill="none" stroke="#f472b6" stroke-width="1.2" stroke-opacity="0.35" stroke-dasharray="4,3" marker-end="url(#arr-pink)"/>
+      <!-- nginx → rag-api (proxy) -->
+      <path d="M617,638 L617,560 L587,560 L587,114" fill="none" stroke="#f472b6" stroke-width="1.2" stroke-opacity="0.35" stroke-dasharray="4,3" marker-end="url(#arr-pink)"/>
+
+      <!-- ── PURPLE: File system reads/writes ── -->
+      <!-- discovery → USB SSD (reads files) -->
+      <path d="M517,312 L517,560 L1047,560 L1047,638" fill="none" stroke="#a78bfa" stroke-width="1.2" stroke-opacity="0.35" marker-end="url(#arr-purple)"/>
+      <!-- store → ChromaDB on disk (inside chroma_data) -->
+      <path d="M1102,312 L1102,400 L1150,400 L1150,560 L1070,560 L1070,638" fill="none" stroke="#a78bfa" stroke-width="1.2" stroke-opacity="0.3" marker-end="url(#arr-purple)"/>
+
+      <!-- test_pipeline → multiple (lighter) -->
+      <path d="M950,496 L920,496 L920,415 L362,415 L362,410" fill="none" stroke="#5b8def" stroke-width="1" stroke-opacity="0.2" stroke-dasharray="3,3" marker-end="url(#arr-blue)"/>
+
+    </svg>
+
+    <!-- Legend -->
+    <div class="wiring-legend">
+      <div class="legend-item"><div class="legend-line imports"></div>Python import</div>
+      <div class="legend-item"><div class="legend-line http"></div>HTTP call</div>
+      <div class="legend-item"><div class="legend-line spawns"></div>systemd ExecStart</div>
+      <div class="legend-item"><div class="legend-line reads"></div>File I/O</div>
+      <div class="legend-item"><div class="legend-line proxies"></div>Nginx proxy/serve</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══ Layer 1: Interfaces ═══ -->
+<div class="layer">
+  <div class="section-label">Layer 1 — User Interfaces &amp; Entry Points</div>
+  <div class="layer-grid grid-4">
+
+    <div class="card cyan">
+      <div class="card-header">
+        <div class="card-icon">⌨️</div>
+        <div>
+          <div class="card-title">CLI · run_indexer.py</div>
+          <div class="card-file">design-library-indexer/run_indexer.py · 289 LOC</div>
+        </div>
+      </div>
+      <div class="card-body">
+        Subcommands: index, search, stats, reset. Supports --full, --show-code, --include-head, framework/category filters.
+        <ul>
+          <li>RotatingFileHandler (10MB × 5)</li>
+          <li>Argparse with common args</li>
+          <li>exclude_sections=["head-meta"] default</li>
+        </ul>
+        <ul style="margin-top:0.3rem;">
+          <li style="color:var(--accent-blue)"><strong>imports:</strong> config, engine, embeddings, store</li>
+        </ul>
+      </div>
+      <span class="card-tag">cli</span>
+    </div>
+
+    <div class="card green">
+      <div class="card-header">
+        <div class="card-icon">🌐</div>
+        <div>
+          <div class="card-title">RAG API · FastAPI</div>
+          <div class="card-file">rag-api/main.py · 387 LOC</div>
+        </div>
+      </div>
+      <div class="card-body">
+        REST endpoints: /search, /generate, /templates/{cat}, /seo/audit, /health. CORS-enabled, served via nginx.
+        <ul>
+          <li>POST /search → embed + vector query</li>
+          <li>POST /generate → RAG + LLM pipeline</li>
+          <li>GET /templates/{cat} → deduped by file</li>
+        </ul>
+        <ul style="margin-top:0.3rem;">
+          <li style="color:var(--accent-blue)"><strong>imports:</strong> config, embeddings, store, llm, prompts, seo</li>
+        </ul>
+      </div>
+      <span class="card-tag">port 8000</span>
+    </div>
+
+    <div class="card purple">
+      <div class="card-header">
+        <div class="card-icon">🔌</div>
+        <div>
+          <div class="card-title">MCP Server</div>
+          <div class="card-file">mcp-server/server.py · 300 LOC</div>
+        </div>
+      </div>
+      <div class="card-body">
+        FastMCP stdio transport for Claude Code / VS Code integration. 5 tools: search, generate, templates, seo_audit, health.
+        <ul>
+          <li>Shared httpx.AsyncClient lifespan</li>
+          <li>GENERATE_TIMEOUT = 660s (11 min)</li>
+          <li>Proxies to RAG API localhost:8000</li>
+        </ul>
+        <ul style="margin-top:0.3rem;">
+          <li style="color:var(--accent-green)"><strong>calls:</strong> rag-api via HTTP (no direct imports)</li>
+        </ul>
+      </div>
+      <span class="card-tag">stdio mcp</span>
+    </div>
+
+    <div class="card pink">
+      <div class="card-header">
+        <div class="card-icon">🖥️</div>
+        <div>
+          <div class="card-title">Frontend</div>
+          <div class="card-file">frontend/ · HTML + CSS + JS</div>
+        </div>
+      </div>
+      <div class="card-body">
+        Single-page app with tab navigation. Dark theme, monospace code blocks, real-time health indicator.
+        <ul>
+          <li>Search with framework/category filters</li>
+          <li>Generate with live elapsed timer</li>
+          <li>Templates grid + SEO audit panel</li>
+        </ul>
+        <ul style="margin-top:0.3rem;">
+          <li style="color:var(--accent-green)"><strong>calls:</strong> rag-api via /api/* (nginx proxy)</li>
+        </ul>
+      </div>
+      <span class="card-tag">nginx :80</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Layer 2: Core Indexer Modules ═══ -->
+<div class="layer">
+  <div class="section-label">Layer 2 — Core Indexer Modules (design-library-indexer/indexer/)</div>
+  <div class="layer-grid grid-3">
+
+    <div class="card blue">
+      <div class="card-header">
+        <div class="card-icon">⚙️</div>
+        <div>
+          <div class="card-title">config.py</div>
+          <div class="card-file">Central configuration · 110 LOC</div>
+        </div>
+      </div>
+      <div class="card-body">
+        Single @dataclass with all tunable settings. Paths, extensions, skip patterns, chunk sizes.
+        <ul>
+          <li>chunk_target=1000 / max=2000 / min=100</li>
+          <li>batch_size=100 (Pi-optimized)</li>
+          <li>12 code_extensions, 4 config_extensions</li>
+          <li>index_paths: 4 top-level directories</li>
+        </ul>
+        <ul style="margin-top:0.3rem;">
+          <li style="color:var(--accent-amber)"><strong>imported by:</strong> ALL indexer modules</li>
+        </ul>
+      </div>
+      <span class="card-tag">@dataclass</span>
+    </div>
+
+    <div class="card blue">
+      <div class="card-header">
+        <div class="card-icon">🔧</div>
+        <div>
+          <div class="card-title">engine.py</div>
+          <div class="card-file">Pipeline orchestrator · 377 LOC</div>
+        </div>
+      </div>
+      <div class="card-body">
+        Full/incremental index runs. Parallel embedding via ThreadPoolExecutor + autotune.
+        <ul>
+          <li>Contextual embed prefix (framework/repo)</li>
+          <li>Batch flush at config.batch_size</li>
+          <li>Progress: ETA, %, counts</li>
+          <li>Stats → JSON + JSONL log</li>
+        </ul>
+        <ul style="margin-top:0.3rem;">
+          <li style="color:var(--accent-blue)"><strong>imports:</strong> config, discovery, chunker, embeddings, store, autotune</li>
+        </ul>
+      </div>
+      <span class="card-tag">orchestrator</span>
+    </div>
+
+    <div class="card blue">
+      <div class="card-header">
+        <div class="card-icon">🔎</div>
+        <div>
+          <div class="card-title">discovery.py</div>
+          <div class="card-file">File walker + change detection · 333 LOC</div>
+        </div>
+      </div>
+      <div class="card-body">
+        os.walk with in-place directory pruning. SHA256 hashing for incremental indexing.
+        <ul>
+          <li>Framework detection from ext + path</li>
+          <li>Repo name extraction from path structure</li>
+          <li>17 component categories by keyword match</li>
+          <li>Deleted file cleanup via hash diff</li>
+        </ul>
+        <ul style="margin-top:0.3rem;">
+          <li style="color:var(--accent-blue)"><strong>imports:</strong> config</li>
+          <li style="color:var(--accent-purple)"><strong>reads:</strong> /mnt/design-library/*</li>
+        </ul>
+      </div>
+      <span class="card-tag">sha256</span>
+    </div>
+
+    <div class="card blue">
+      <div class="card-header">
+        <div class="card-icon">✂️</div>
+        <div>
+          <div class="card-title">chunker.py</div>
+          <div class="card-file">AST-aware code splitting · 458 LOC</div>
+        </div>
+      </div>
+      <div class="card-body">
+        Language-specific chunking with 7 strategies + fallback. Post-process: split oversized, drop tiny, re-number.
+        <ul>
+          <li>HTML: semantic tags, head-meta exclusion</li>
+          <li>CSS: @media / @keyframes boundaries</li>
+          <li>JSX/TS: export/function/class splits</li>
+          <li>Vue/Svelte/Astro: SFC block splitting</li>
+        </ul>
+        <ul style="margin-top:0.3rem;">
+          <li style="color:var(--accent-blue)"><strong>imports:</strong> config</li>
+        </ul>
+      </div>
+      <span class="card-tag">7 strategies</span>
+    </div>
+
+    <div class="card blue">
+      <div class="card-header">
+        <div class="card-icon">🔡</div>
+        <div>
+          <div class="card-title">embeddings.py</div>
+          <div class="card-file">Ollama API client · 149 LOC</div>
+        </div>
+      </div>
+      <div class="card-body">
+        Calls /api/embed with retry + exponential backoff. 600s timeout for Pi hardware.
+        <ul>
+          <li>30K char truncation (8192 token limit)</li>
+          <li>3 retries on connection/timeout errors</li>
+          <li>Health check via /api/tags</li>
+          <li>Sequential embed_batch() fallback</li>
+        </ul>
+        <ul style="margin-top:0.3rem;">
+          <li style="color:var(--accent-blue)"><strong>imports:</strong> config</li>
+          <li style="color:var(--accent-green)"><strong>calls:</strong> Ollama :11434/api/embed</li>
+        </ul>
+      </div>
+      <span class="card-tag">768-dim</span>
+    </div>
+
+    <div class="card blue">
+      <div class="card-header">
+        <div class="card-icon">💾</div>
+        <div>
+          <div class="card-title">store.py</div>
+          <div class="card-file">ChromaDB interface · 247 LOC</div>
+        </div>
+      </div>
+      <div class="card-body">
+        PersistentClient with HNSW cosine index. Telemetry disabled via env vars before import.
+        <ul>
+          <li>exclude_sections filter ($ne operator)</li>
+          <li>$and compound where filters</li>
+          <li>Batch upsert + delete_by_file</li>
+          <li>Stats: peek 1000 for distribution</li>
+        </ul>
+        <ul style="margin-top:0.3rem;">
+          <li style="color:var(--accent-blue)"><strong>imports:</strong> config</li>
+          <li style="color:var(--accent-purple)"><strong>writes:</strong> /home/rpi/ai-engine/chroma_data/</li>
+        </ul>
+      </div>
+      <span class="card-tag">hnsw:cosine</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Layer 3: Support Modules ═══ -->
+<div class="layer">
+  <div class="section-label">Layer 3 — Support Modules &amp; AI Services</div>
+  <div class="layer-grid grid-4">
+
+    <div class="card amber">
+      <div class="card-header">
+        <div class="card-icon">🌡️</div>
+        <div>
+          <div class="card-title">autotune.py</div>
+          <div class="card-file">Adaptive worker tuning · 199 LOC</div>
+        </div>
+      </div>
+      <div class="card-body">
+        Dynamically adjusts embedding worker count based on CPU load, RAM, and Pi temperature.
+        <ul>
+          <li>vcgencmd temp: &gt;82°C→min, &gt;78°C→dec</li>
+          <li>RAM: &lt;0.6GB→dec, &gt;1.2GB→inc</li>
+          <li>Load ratio: &gt;1.0→dec, &lt;0.6→inc</li>
+          <li>Clamp [1, 3] · fails safe to default</li>
+        </ul>
+        <ul style="margin-top:0.3rem;">
+          <li style="color:var(--accent-amber)"><strong>imported by:</strong> engine.py</li>
+          <li style="color:var(--accent-blue)"><strong>imports:</strong> psutil (optional)</li>
+        </ul>
+      </div>
+      <span class="card-tag">pi thermal</span>
+    </div>
+
+    <div class="card green">
+      <div class="card-header">
+        <div class="card-icon">💬</div>
+        <div>
+          <div class="card-title">llm.py</div>
+          <div class="card-file">Ollama chat client · 124 LOC</div>
+        </div>
+      </div>
+      <div class="card-body">
+        Thin wrapper around /api/chat for code generation. Non-streaming, 600s timeout.
+        <ul>
+          <li>System + User message pair</li>
+          <li>Temperature configurable (default 0.7)</li>
+          <li>Structured error returns</li>
+        </ul>
+        <ul style="margin-top:0.3rem;">
+          <li style="color:var(--accent-amber)"><strong>imported by:</strong> rag-api/main.py</li>
+          <li style="color:var(--accent-green)"><strong>calls:</strong> Ollama :11434/api/chat</li>
+        </ul>
+      </div>
+      <span class="card-tag">qwen2.5-coder:3b</span>
+    </div>
+
+    <div class="card green">
+      <div class="card-header">
+        <div class="card-icon">📝</div>
+        <div>
+          <div class="card-title">prompts.py</div>
+          <div class="card-file">Prompt engineering · 146 LOC</div>
+        </div>
+      </div>
+      <div class="card-body">
+        4 task-specific system prompts with design rules injection and RAG context templating.
+        <ul>
+          <li>Tasks: hero, page, component, seo_rewrite</li>
+          <li>DESIGN_RULES: semantic HTML, a11y, no slop</li>
+          <li>Context chunks → numbered references</li>
+        </ul>
+        <ul style="margin-top:0.3rem;">
+          <li style="color:var(--accent-amber)"><strong>imported by:</strong> rag-api/main.py</li>
+          <li style="color:var(--text-dim)"><strong>standalone:</strong> no external deps</li>
+        </ul>
+      </div>
+      <span class="card-tag">4 tasks</span>
+    </div>
+
+    <div class="card green">
+      <div class="card-header">
+        <div class="card-icon">🔍</div>
+        <div>
+          <div class="card-title">seo.py</div>
+          <div class="card-file">SEO audit engine · 244 LOC</div>
+        </div>
+      </div>
+      <div class="card-body">
+        11 deterministic checks using BeautifulSoup. Score 0-100 with error/warning severity.
+        <ul>
+          <li>Title, meta desc, H1, lang, charset</li>
+          <li>Viewport, img alt, heading hierarchy</li>
+          <li>OG tags, canonical, empty links</li>
+        </ul>
+        <ul style="margin-top:0.3rem;">
+          <li style="color:var(--accent-amber)"><strong>imported by:</strong> rag-api/main.py</li>
+          <li style="color:var(--accent-blue)"><strong>imports:</strong> beautifulsoup4</li>
+        </ul>
+      </div>
+      <span class="card-tag">11 checks</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Layer 4: Infrastructure ═══ -->
+<div class="layer">
+  <div class="section-label">Layer 4 — Infrastructure &amp; Services</div>
+  <div class="layer-grid grid-4">
+
+    <div class="card red">
+      <div class="card-header">
+        <div class="card-icon">👀</div>
+        <div>
+          <div class="card-title">File Watcher</div>
+          <div class="card-file">watch_library.py + systemd</div>
+        </div>
+      </div>
+      <div class="card-body">
+        inotify via watchdog with debounced indexing. Runs as design-library-watcher.service.
+        <ul>
+          <li>30s debounce (configurable)</li>
+          <li>MemoryMax=512M, CPUQuota=50%</li>
+          <li>Auto-restart on failure (10s delay)</li>
+          <li>Security: NoNewPrivileges, ProtectSystem</li>
+        </ul>
+        <ul style="margin-top:0.3rem;">
+          <li style="color:var(--accent-amber)"><strong>spawns:</strong> watch_library.py → engine</li>
+        </ul>
+      </div>
+      <span class="card-tag">systemd</span>
+    </div>
+
+    <div class="card red">
+      <div class="card-header">
+        <div class="card-icon">🕐</div>
+        <div>
+          <div class="card-title">Nightly Reindex</div>
+          <div class="card-file">reindex.service + .timer</div>
+        </div>
+      </div>
+      <div class="card-body">
+        Daily full rebuild at 02:00 UTC (±5min jitter). Persistent timer catches missed runs.
+        <ul>
+          <li>TimeoutStartSec=28800 (8 hours)</li>
+          <li>MemoryMax=1G</li>
+          <li>oneshot service type</li>
+        </ul>
+        <ul style="margin-top:0.3rem;">
+          <li style="color:var(--accent-amber)"><strong>spawns:</strong> run_indexer.py index --full</li>
+        </ul>
+      </div>
+      <span class="card-tag">daily 2am</span>
+    </div>
+
+    <div class="card red">
+      <div class="card-header">
+        <div class="card-icon">🔀</div>
+        <div>
+          <div class="card-title">Nginx Reverse Proxy</div>
+          <div class="card-file">nginx-ai-engine.conf</div>
+        </div>
+      </div>
+      <div class="card-body">
+        Static frontend served from /home/rpi/ai-engine/frontend. API calls proxied to FastAPI.
+        <ul>
+          <li>/api/* → localhost:8000/*</li>
+          <li>proxy_read_timeout 600s</li>
+          <li>proxy_buffering off</li>
+        </ul>
+        <ul style="margin-top:0.3rem;">
+          <li style="color:var(--accent-pink)"><strong>proxies:</strong> frontend ← :80 → rag-api :8000</li>
+        </ul>
+      </div>
+      <span class="card-tag">port 80</span>
+    </div>
+
+    <div class="card red">
+      <div class="card-header">
+        <div class="card-icon">📦</div>
+        <div>
+          <div class="card-title">Storage Layout</div>
+          <div class="card-file">/mnt/design-library (USB SSD)</div>
+        </div>
+      </div>
+      <div class="card-body">
+        500GB USB SSD mounted at /mnt/design-library with ext4 + noatime.
+        <ul>
+          <li>example-websites/ (html, react, tailwind…)</li>
+          <li>components/ (headers, heros, footers…)</li>
+          <li>seo-configs/ · style-guides/</li>
+          <li>.index/ (hashes, stats, logs)</li>
+        </ul>
+        <ul style="margin-top:0.3rem;">
+          <li style="color:var(--accent-purple)"><strong>read by:</strong> discovery.py</li>
+          <li style="color:var(--accent-purple)"><strong>written by:</strong> store.py (chroma_data)</li>
+        </ul>
+      </div>
+      <span class="card-tag">ext4 noatime</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Dependency Map ═══ -->
+<div class="layer">
+  <div class="section-label">Python Dependencies</div>
+  <div class="layer-grid grid-3">
+    <div class="card" style="border-left:2px solid var(--border-bright)">
+      <div class="card-title" style="margin-bottom:0.4rem">design-library-indexer</div>
+      <div class="card-body">
+        <ul>
+          <li>chromadb ≥0.5, &lt;1.0</li>
+          <li>requests ≥2.31</li>
+          <li>watchdog ≥4.0</li>
+          <li>pyyaml ≥6.0</li>
+          <li>psutil ≥5.9</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card" style="border-left:2px solid var(--border-bright)">
+      <div class="card-title" style="margin-bottom:0.4rem">rag-api</div>
+      <div class="card-body">
+        <ul>
+          <li>fastapi ≥0.115</li>
+          <li>uvicorn ≥0.32</li>
+          <li>beautifulsoup4 ≥4.12</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card" style="border-left:2px solid var(--border-bright)">
+      <div class="card-title" style="margin-bottom:0.4rem">mcp-server</div>
+      <div class="card-body">
+        <ul>
+          <li>mcp[cli] ≥1.0</li>
+          <li>httpx ≥0.27</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /wrapper -->
+</body>
+</html>
