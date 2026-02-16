@@ -1,10 +1,10 @@
 # AI Engine
 
-AI-powered semantic search for web design files running on Raspberry Pi 5.
+AI-powered design system with semantic search, RAG code generation, and IDE integration — running entirely on a Raspberry Pi 4.
 
 ## What It Does
 
-Indexes your design library (HTML, CSS, JS, React, Vue, etc.) into a vector database so you can search by describing what you want instead of remembering file names.
+Indexes your design library (HTML, CSS, JS, React, Vue, etc.) into a vector database, then uses retrieval-augmented generation (RAG) to search, generate code, and audit SEO — all from a web UI, CLI, or directly in your IDE via MCP.
 
 ```bash
 # Find code by description
@@ -13,6 +13,139 @@ Indexes your design library (HTML, CSS, JS, React, Vue, etc.) into a vector data
 ./search.sh "animated loading spinner"
 ./search.sh "pricing table with three columns"
 ```
+
+## Full System Architecture
+
+```
+Browser (LAN :80)                     IDE (Claude Code / VS Code)
+       |                                        |
+       v                                        v (stdio)
+nginx reverse proxy (:80)              MCP Server (mcp-server/server.py)
+       |                                        |
+       |-- /* --> static frontend               | httpx
+       |-- /api/* --> proxy to :8000            |
+       v                                        v
+              FastAPI RAG API (:8000)
+              |           |           |
+              v           v           v
+          Ollama      ChromaDB    BeautifulSoup
+        (LLM+Embed)  (vectors)    (SEO audit)
+              |
+              v
+    USB SSD: /mnt/design-library/
+```
+
+### Components
+
+| Component | Port | Purpose |
+|-----------|------|---------|
+| **nginx** | 80 | Serves frontend, proxies `/api/*` to RAG API |
+| **RAG API** (FastAPI) | 8000 | Search, generate, templates, SEO audit endpoints |
+| **MCP Server** | stdio | Exposes RAG tools to Claude Code / VS Code |
+| **Ollama** | 11434 | Local LLM (qwen2.5-coder:3b) and embeddings (nomic-embed-text) |
+| **ChromaDB** | embedded | Vector database for semantic search |
+| **Indexer** | n/a | Processes design files into embeddings |
+| **File Watcher** | n/a | Auto-indexes new files (systemd service) |
+
+### Data Flow
+
+1. **Indexing:** Design files on USB SSD are chunked, embedded via Ollama (nomic-embed-text, 768-dim), and stored in ChromaDB
+2. **Search:** User query is embedded, ChromaDB finds nearest vectors by cosine similarity, returns matching code
+3. **Generation:** User brief is embedded, top N matching chunks are retrieved as context, injected into a task-specific prompt with design rules, sent to Ollama (qwen2.5-coder:3b) for code generation
+4. **SEO Audit:** HTML is parsed with BeautifulSoup and checked against 11 SEO rules (no LLM needed)
+
+### Access Methods
+
+| Method | How | Best For |
+|--------|-----|----------|
+| **Web UI** | `http://<pi-ip>/` from any device on LAN | Visual browsing, quick searches, code generation |
+| **CLI** | `./search.sh "query"` on the Pi | Quick terminal searches |
+| **API** | `curl http://localhost:8000/search` | Scripts, automation, integrations |
+| **MCP (IDE)** | Claude Code / VS Code tools | Generating code within your editor workflow |
+
+## Web UI
+
+Access the frontend from any device on the local network at `http://<pi-ip>/`.
+
+Four tabs:
+- **Search** — Semantic search with framework/category filters and code preview
+- **Generate** — RAG-powered code generation with live progress timer
+- **Templates** — Browse templates across 16 categories
+- **SEO Audit** — Paste HTML, get a score out of 100 with detailed findings
+
+### Setup
+
+```bash
+# Install nginx
+sudo apt-get install -y nginx
+
+# Configure
+sudo cp /home/rpi/ai-engine/setup-ai-process/nginx-ai-engine.conf /etc/nginx/sites-available/ai-engine
+sudo ln -sf /etc/nginx/sites-available/ai-engine /etc/nginx/sites-enabled/ai-engine
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo chmod o+x /home/rpi
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+See [docs/frontend.md](docs/frontend.md) for details.
+
+## RAG API
+
+FastAPI server on port 8000 providing:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | System status (Ollama, ChromaDB, chunk count) |
+| `/search` | POST | Semantic search across the design library |
+| `/generate` | POST | RAG-powered code generation from a brief |
+| `/templates/{category}` | GET | List templates by category |
+| `/seo/audit` | POST | SEO audit on HTML content |
+
+### Start the API
+
+```bash
+cd /home/rpi/ai-engine/rag-api
+nohup /home/rpi/ai-engine/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 \
+  > /home/rpi/ai-engine/logs/rag-api.log 2>&1 &
+```
+
+See [docs/rag-api.md](docs/rag-api.md) for endpoint examples and request/response schemas.
+
+## MCP Server (IDE Integration)
+
+Exposes 5 RAG tools to Claude Code and VS Code via the Model Context Protocol:
+
+| Tool | Description |
+|------|-------------|
+| `search_design_library` | Semantic search with framework/category filters |
+| `generate_code` | RAG-powered code generation from a brief |
+| `list_templates` | Browse templates by category |
+| `seo_audit` | Audit HTML for SEO issues |
+| `health_check` | System status check |
+
+### Setup for Claude Code
+
+```bash
+claude mcp add design-rag -- /home/rpi/ai-engine/venv/bin/python /home/rpi/ai-engine/mcp-server/server.py
+```
+
+### Setup for VS Code
+
+Create `.vscode/mcp.json` in your workspace:
+
+```json
+{
+  "servers": {
+    "design-rag": {
+      "type": "stdio",
+      "command": "/home/rpi/ai-engine/venv/bin/python",
+      "args": ["/home/rpi/ai-engine/mcp-server/server.py"]
+    }
+  }
+}
+```
+
+See [docs/mcp-server.md](docs/mcp-server.md) for full tool reference and troubleshooting.
 
 ## Quick Start
 
@@ -199,6 +332,12 @@ tail -f /home/rpi/ai-engine/logs/indexer-manual.log | grep "Auto-tune"
 # Watch file watcher
 tail -f /home/rpi/ai-engine/logs/watcher.log
 
+# Watch RAG API
+tail -f /home/rpi/ai-engine/logs/rag-api.log
+
+# Check RAG API health
+curl -s http://localhost:8000/health | python3 -m json.tool
+
 # System health
 vcgencmd measure_temp
 free -h
@@ -214,12 +353,13 @@ uptime
 | `logs/watcher-error.log` | File watcher errors |
 | `logs/reindex.log` | Nightly re-index |
 | `logs/reindex-error.log` | Nightly re-index errors |
+| `logs/rag-api.log` | RAG API server |
 
 ## Directory Structure
 
 ```
 /home/rpi/ai-engine/
-├── design-library-indexer/     # Main application (GitHub repo)
+├── design-library-indexer/     # Indexer application (GitHub repo)
 │   ├── indexer/                # Python modules
 │   │   ├── autotune.py        # Adaptive worker auto-tuning
 │   │   ├── chunker.py         # Code splitting
@@ -228,10 +368,25 @@ uptime
 │   │   ├── embeddings.py      # Ollama client
 │   │   ├── engine.py          # Pipeline orchestration
 │   │   └── store.py           # ChromaDB interface
-│   ├── setup-ai-process/      # Service files and setup
-│   ├── docs/                  # Documentation
+│   ├── setup-ai-process/      # Service files, nginx config, setup script
 │   ├── run_indexer.py         # CLI entry point
 │   └── watch_library.py       # File watcher
+├── rag-api/                    # RAG API server
+│   ├── main.py                # FastAPI app with all endpoints
+│   ├── llm.py                 # Ollama chat client (qwen2.5-coder:3b)
+│   ├── prompts.py             # System prompts + design rules
+│   ├── seo.py                 # SEO audit logic (BeautifulSoup)
+│   └── test_pipeline.py       # End-to-end test
+├── frontend/                   # Web UI (static HTML/CSS/JS)
+│   ├── index.html             # SPA with 4 tabs
+│   ├── css/style.css          # Dark theme styles
+│   └── js/app.js              # Frontend logic
+├── mcp-server/                 # MCP server for IDE integration
+│   └── server.py              # 5 tools via stdio transport
+├── docs/                       # Documentation
+│   ├── rag-api.md             # RAG API reference
+│   ├── frontend.md            # Frontend setup guide
+│   └── mcp-server.md          # MCP server setup guide
 ├── venv/                       # Python virtual environment
 ├── chroma_data/                # Vector database
 ├── logs/                       # Application logs
@@ -270,6 +425,10 @@ Drop git repos into `/mnt/design-library/example-websites/` — the watcher dete
 ## Key Features
 
 - **Semantic search** - Find code by describing what you want
+- **RAG code generation** - Generate UI code using design library context
+- **Web UI** - Browser-based interface accessible from any device on LAN
+- **MCP IDE integration** - Use RAG tools directly in Claude Code / VS Code
+- **SEO audit** - Score HTML against 11 SEO rules
 - **Head-meta filtering** - Excludes HTML `<head>` boilerplate from search results by default
 - **Adaptive worker auto-tuning** - 40-70% faster indexing based on CPU/RAM/temperature
 - **Incremental indexing** - Only processes new or changed files
@@ -280,15 +439,22 @@ Drop git repos into `/mnt/design-library/example-websites/` — the watcher dete
 
 ## Documentation
 
-- [docs/README.md](design-library-indexer/docs/README.md) - Comprehensive system guide
+- [docs/rag-api.md](docs/rag-api.md) - RAG API endpoints, schemas, and examples
+- [docs/frontend.md](docs/frontend.md) - Web UI setup and nginx configuration
+- [docs/mcp-server.md](docs/mcp-server.md) - MCP server setup and tool reference
+- [docs/README.md](design-library-indexer/docs/README.md) - Comprehensive indexer guide
 - [docs/adaptive_workers.md](design-library-indexer/docs/adaptive_workers.md) - Auto-tuning guide
 - [docs/design_decisions.md](design-library-indexer/docs/design_decisions.md) - Architecture decisions
 - [docs/implementation_summary.md](design-library-indexer/docs/implementation_summary.md) - Quick reference
 
 ## Tech Stack
 
-- **Raspberry Pi 5** - Hardware platform
-- **Ollama** - Local AI (nomic-embed-text, 768-dim embeddings)
+- **Raspberry Pi 4** - Hardware platform
+- **Ollama** - Local LLM (qwen2.5-coder:3b) and embeddings (nomic-embed-text, 768-dim)
 - **ChromaDB** - Vector database
-- **Python 3** - Application code
+- **FastAPI** - RAG API server
+- **nginx** - Reverse proxy and static file server
+- **MCP SDK** - Model Context Protocol for IDE integration
+- **BeautifulSoup** - SEO audit HTML parsing
+- **Python 3.12** - Application code
 - **systemd** - Service management
