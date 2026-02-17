@@ -1,0 +1,27 @@
+# Design Library Indexer — Python Dependencies
+# Install: pip install -r requirements.txt
+
+# ── Core ──────────────────────────────────────────────────────
+chromadb>=0.5.0,<1.0.0          # Vector database (uses SQLite + hnswlib)
+requests>=2.31.0,<3.0.0         # HTTP client for Ollama API
+
+# ── File Watching ─────────────────────────────────────────────
+watchdog>=4.0.0,<5.0.0          # Filesystem event monitoring
+
+# ── Utilities ─────────────────────────────────────────────────
+pyyaml>=6.0                     # YAML parsing for client briefs
+psutil>=5.9.0                   # System metrics (RAM, CPU) for adaptive worker tuning
+
+# ── Optional: Ollama Python SDK (alternative to raw requests) ─
+# Uncomment if you prefer the SDK over raw HTTP:
+# ollama>=0.3.0,<1.0.0
+
+
+# ── MCP-Server ─────────────────────────────────────────────────
+mcp[cli]>=1.0.0
+httpx>=0.27.0
+
+# ── RAG API ─────────────────────────────────────────────────
+fastapi>=0.115.0
+uvicorn>=0.32.0
+beautifulsoup4>=4.12.0
