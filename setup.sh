@@ -22,7 +22,8 @@ set -euo pipefail
 #
 # Usage:
 #     chmod +x setup.sh
-#     sudo ./setup.sh
+#     sudo ./setup.sh                           # Run without systemd services
+#     sudo ENABLE_SERVICES=true ./setup.sh      # Run with systemd services enabled
 #
 # Features:
 #   - Adaptive worker auto-tuning (40-70% faster indexing)
@@ -36,10 +37,29 @@ set -euo pipefail
 LIBRARY_MOUNT="/mnt/design-library"
 ENGINE_DIR="/home/rpi/ai-engine"
 VENV_DIR="${ENGINE_DIR}/venv"
+ENABLE_SERVICES="${ENABLE_SERVICES:-false}"
 
 # Determine the script's directory (should be the cloned repo)
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INDEXER_DIR="${REPO_DIR}"
+
+# ── Wait for dpkg/apt lock ───────────────────────────────────
+wait_for_apt_lock() {
+    local lock_files=("/var/lib/dpkg/lock-frontend" "/var/lib/dpkg/lock" "/var/lib/apt/lists/lock")
+    local timeout=300
+    local elapsed=0
+    for lock_file in "${lock_files[@]}"; do
+        while ! flock -n "${lock_file}" /bin/true 2>/dev/null; do
+            if [ ${elapsed} -ge ${timeout} ]; then
+                echo "  ERROR: apt/dpkg lock held for over ${timeout}s. Try: sudo kill $(lsof -t ${lock_file} 2>/dev/null) or reboot."
+                exit 1
+            fi
+            echo "  apt/dpkg is locked by another process. Waiting... (${elapsed}s elapsed)"
+            sleep 5
+            elapsed=$((elapsed + 5))
+        done
+    done
+}
 
 echo "═══════════════════════════════════════════════════"
 echo "  Design Library Indexer — Setup"
@@ -47,28 +67,36 @@ echo "════════════════════════�
 echo ""
 echo "  Repository: ${REPO_DIR}"
 echo "  Installing to: ${ENGINE_DIR}"
+echo "  Enable systemd services: ${ENABLE_SERVICES}"
 echo ""
 
 # ── 1. System dependencies ──────────────────────────────────
 echo ""
 echo "[1/6] Installing system dependencies..."
+wait_for_apt_lock
 apt-get update -qq
 apt-get install -y -qq python3 python3-pip python3-venv git curl
 
 # ── 2. Mount USB drive ──────────────────────────────────────
 echo ""
 echo "[2/6] Setting up USB drive mount..."
-mkdir -p "${LIBRARY_MOUNT}"
 
-# Detect USB drive (assumes it's the first USB block device)
-USB_DEVICE=$(lsblk -dpno NAME,TRAN | grep usb | head -1 | awk '{print $1}')
-if [ -z "${USB_DEVICE}" ]; then
-    echo "  WARNING: No USB drive detected."
-    echo "  Plug in your SSD and re-run, or manually add to /etc/fstab:"
-    echo "  /dev/sdX1  ${LIBRARY_MOUNT}  ext4  defaults,noatime  0  2"
+# Check if already mounted or in fstab
+if grep -q "${LIBRARY_MOUNT}" /etc/fstab; then
+    echo "  ${LIBRARY_MOUNT} already in fstab"
+    mount "${LIBRARY_MOUNT}" 2>/dev/null || true
+    echo "  Mount already configured."
 else
-    PARTITION="${USB_DEVICE}1"
-    if ! grep -q "${LIBRARY_MOUNT}" /etc/fstab; then
+    mkdir -p "${LIBRARY_MOUNT}"
+
+    # Detect USB drive (assumes it's the first USB block device)
+    USB_DEVICE=$(lsblk -dpno NAME,TRAN | grep usb | head -1 | awk '{print $1}')
+    if [ -z "${USB_DEVICE}" ]; then
+        echo "  WARNING: No USB drive detected."
+        echo "  Plug in your SSD and re-run, or manually add to /etc/fstab:"
+        echo "  /dev/sdX1  ${LIBRARY_MOUNT}  ext4  defaults,noatime  0  2"
+    else
+        PARTITION="${USB_DEVICE}1"
         UUID=$(blkid -s UUID -o value "${PARTITION}" 2>/dev/null || echo "")
         if [ -n "${UUID}" ]; then
             echo "UUID=${UUID}  ${LIBRARY_MOUNT}  ext4  defaults,noatime  0  2" >> /etc/fstab
@@ -78,44 +106,47 @@ else
             echo "  WARNING: Could not determine UUID for ${PARTITION}."
             echo "  Please format the drive (ext4) and update /etc/fstab manually."
         fi
-    else
-        echo "  ${LIBRARY_MOUNT} already in fstab"
-        mount "${LIBRARY_MOUNT}" 2>/dev/null || true
     fi
 fi
 
 # ── 3. Create directory structure ───────────────────────────
 echo ""
 echo "[3/6] Creating directory structure..."
-mkdir -p "${LIBRARY_MOUNT}/example-websites/html-css"
-mkdir -p "${LIBRARY_MOUNT}/example-websites/react"
-mkdir -p "${LIBRARY_MOUNT}/example-websites/nextjs"
-mkdir -p "${LIBRARY_MOUNT}/example-websites/astro"
-mkdir -p "${LIBRARY_MOUNT}/example-websites/vue"
-mkdir -p "${LIBRARY_MOUNT}/example-websites/svelte"
-mkdir -p "${LIBRARY_MOUNT}/example-websites/tailwind"
-mkdir -p "${LIBRARY_MOUNT}/example-websites/multi-page-sites"
-mkdir -p "${LIBRARY_MOUNT}/components/headers"
-mkdir -p "${LIBRARY_MOUNT}/components/hero-sections"
-mkdir -p "${LIBRARY_MOUNT}/components/footers"
-mkdir -p "${LIBRARY_MOUNT}/components/pricing-tables"
-mkdir -p "${LIBRARY_MOUNT}/components/testimonials"
-mkdir -p "${LIBRARY_MOUNT}/components/contact-forms"
-mkdir -p "${LIBRARY_MOUNT}/components/cta-blocks"
-mkdir -p "${LIBRARY_MOUNT}/components/feature-grids"
-mkdir -p "${LIBRARY_MOUNT}/components/faq-accordions"
-mkdir -p "${LIBRARY_MOUNT}/components/404-pages"
-mkdir -p "${LIBRARY_MOUNT}/seo-configs/schema-templates"
-mkdir -p "${LIBRARY_MOUNT}/seo-configs/meta-templates"
-mkdir -p "${LIBRARY_MOUNT}/seo-configs/robots-templates"
-mkdir -p "${LIBRARY_MOUNT}/style-guides/color-palettes"
-mkdir -p "${LIBRARY_MOUNT}/style-guides/typography-systems"
-mkdir -p "${LIBRARY_MOUNT}/style-guides/design-tokens"
-mkdir -p "${LIBRARY_MOUNT}/client-projects"
-mkdir -p "${LIBRARY_MOUNT}/.index"
+
+# Check if directory structure already exists
+if [ -d "${LIBRARY_MOUNT}/components" ] && [ -d "${LIBRARY_MOUNT}/example-websites" ]; then
+    echo "  Directory structure already exists."
+else
+    mkdir -p "${LIBRARY_MOUNT}/example-websites/html-css"
+    mkdir -p "${LIBRARY_MOUNT}/example-websites/react"
+    mkdir -p "${LIBRARY_MOUNT}/example-websites/nextjs"
+    mkdir -p "${LIBRARY_MOUNT}/example-websites/astro"
+    mkdir -p "${LIBRARY_MOUNT}/example-websites/vue"
+    mkdir -p "${LIBRARY_MOUNT}/example-websites/svelte"
+    mkdir -p "${LIBRARY_MOUNT}/example-websites/tailwind"
+    mkdir -p "${LIBRARY_MOUNT}/example-websites/multi-page-sites"
+    mkdir -p "${LIBRARY_MOUNT}/components/headers"
+    mkdir -p "${LIBRARY_MOUNT}/components/hero-sections"
+    mkdir -p "${LIBRARY_MOUNT}/components/footers"
+    mkdir -p "${LIBRARY_MOUNT}/components/pricing-tables"
+    mkdir -p "${LIBRARY_MOUNT}/components/testimonials"
+    mkdir -p "${LIBRARY_MOUNT}/components/contact-forms"
+    mkdir -p "${LIBRARY_MOUNT}/components/cta-blocks"
+    mkdir -p "${LIBRARY_MOUNT}/components/feature-grids"
+    mkdir -p "${LIBRARY_MOUNT}/components/faq-accordions"
+    mkdir -p "${LIBRARY_MOUNT}/components/404-pages"
+    mkdir -p "${LIBRARY_MOUNT}/seo-configs/schema-templates"
+    mkdir -p "${LIBRARY_MOUNT}/seo-configs/meta-templates"
+    mkdir -p "${LIBRARY_MOUNT}/seo-configs/robots-templates"
+    mkdir -p "${LIBRARY_MOUNT}/style-guides/color-palettes"
+    mkdir -p "${LIBRARY_MOUNT}/style-guides/typography-systems"
+    mkdir -p "${LIBRARY_MOUNT}/style-guides/design-tokens"
+    mkdir -p "${LIBRARY_MOUNT}/client-projects"
+    mkdir -p "${LIBRARY_MOUNT}/.index"
+    echo "  Directory structure created."
+fi
 
 chown -R rpi:rpi "${LIBRARY_MOUNT}"
-echo "  Directory structure created."
 
 # ── 4. Install Ollama + pull models ─────────────────────────
 echo ""
@@ -178,10 +209,15 @@ if [ -f "${SERVICE_DIR}/design-library-watcher.service" ]; then
     cp "${SERVICE_DIR}/design-library-reindex.timer" /etc/systemd/system/
 
     systemctl daemon-reload
-    systemctl enable design-library-watcher
-    systemctl enable design-library-reindex.timer
+    echo "  ✅ Service files installed"
 
-    echo "  ✅ Services installed and enabled"
+    if [ "${ENABLE_SERVICES}" = "true" ]; then
+        systemctl enable design-library-watcher
+        systemctl enable design-library-reindex.timer
+        echo "  ✅ Services enabled"
+    else
+        echo "  Services copied but not enabled (set ENABLE_SERVICES=true to enable)"
+    fi
 else
     echo "  WARNING: systemd service files not found in ${SERVICE_DIR}"
     echo "  Please check repository structure."

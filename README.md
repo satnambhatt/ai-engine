@@ -152,9 +152,12 @@ See [docs/mcp-server.md](docs/mcp-server.md) for full tool reference and trouble
 ### 1. Setup (first time only)
 
 ```bash
-cd /home/rpi/ai-engine/design-library-indexer
+cd /home/rpi/ai-engine
 chmod +x setup.sh
 sudo ./setup.sh
+
+# To also enable systemd services on boot:
+sudo ENABLE_SERVICES=true ./setup.sh
 ```
 
 ### 2. Index your library
@@ -296,6 +299,10 @@ sudo systemctl start design-library-reindex.timer
 sudo systemctl stop design-library-reindex.timer
 ```
 
+### Log rotation
+
+Log rotation is configured automatically during setup via `/etc/logrotate.d/design-library`. Logs in `logs/` are rotated by the system logrotate service.
+
 ### Reload after service file changes
 
 After editing `.service` files, reload systemd and restart:
@@ -371,6 +378,7 @@ uptime
 
 ```
 /home/rpi/ai-engine/
+├── setup.sh                    # One-time setup script (Pi 4)
 ├── design-library-indexer/     # Indexer application (GitHub repo)
 │   ├── indexer/                # Python modules
 │   │   ├── autotune.py        # Adaptive worker auto-tuning

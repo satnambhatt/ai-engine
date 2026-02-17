@@ -52,11 +52,11 @@ def setup_logging(verbose: bool = False) -> None:
         )
     )
 
-    # File handler with rotation (10MB max, keep 5 backup files)
+    # File handler with rotation (5MB per file, keep 10 backup files)
     file_handler = RotatingFileHandler(
         log_dir / "indexer-manual.log",
-        maxBytes=10_485_760,  # 10MB
-        backupCount=5,
+        maxBytes=5_242_880,  # 5MB
+        backupCount=10,
         encoding="utf-8"
     )
     file_handler.setFormatter(

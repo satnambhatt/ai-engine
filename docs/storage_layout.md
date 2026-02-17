@@ -208,7 +208,7 @@
 ### HTML/CSS Templates
 ```bash
 cd /mnt/design-library/example-websites/html-css/
-git clone https://github.com/html5up/html5up.github.io html5up-collection
+git clone https://github.com/zce/html5up.git
 git clone https://github.com/StartBootstrap/startbootstrap-agency
 git clone https://github.com/StartBootstrap/startbootstrap-creative
 git clone https://github.com/tailwindtoolbox/Landing-Page
