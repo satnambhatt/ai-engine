@@ -205,7 +205,11 @@ nohup /home/rpi/ai-engine/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 \
 
 # 3. Copy the updated nginx config and reload
 sudo cp /home/rpi/ai-engine/setup-ai-process/nginx-ai-engine.conf /etc/nginx/sites-available/ai-engine
-sudo nginx -t && sudo systemctl reload nginx
+sudo ln -sf /etc/nginx/sites-available/ai-engine /etc/nginx/sites-enabled/ai-engine
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo chmod o+x /home/rpi /home/rpi/ai-engine /home/rpi/ai-engine/frontend
+sudo chmod o+r /home/rpi/ai-engine/frontend/index.html
+sudo nginx -t && sudo systemctl start nginx && sudo systemctl reload nginx
 ```
 
 Resume works because the system saves SHA256 hashes after each file. On re-run, it skips already-indexed files.

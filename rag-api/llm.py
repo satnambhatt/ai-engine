@@ -51,6 +51,7 @@ class OllamaChat:
         system_prompt: str,
         user_prompt: str,
         temperature: float = 0.7,
+        history: list[dict] | None = None,
     ) -> dict:
         """
         Generate a chat completion via Ollama.
@@ -59,6 +60,7 @@ class OllamaChat:
             system_prompt: System message setting the AI's role and rules.
             user_prompt: User message with the actual request.
             temperature: Sampling temperature (0.0-1.0).
+            history: Prior conversation turns as [{"role": "user"|"assistant", "content": ...}].
 
         Returns:
             Dict with keys: content, model, duration_ms.
@@ -66,6 +68,7 @@ class OllamaChat:
         """
         messages = [
             {"role": "system", "content": system_prompt},
+            *(history or []),
             {"role": "user", "content": user_prompt},
         ]
 

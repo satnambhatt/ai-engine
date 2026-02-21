@@ -90,16 +90,16 @@ class IndexerConfig:
     # ── Chunking ───────────────────────────────────────────────────────
     # Target chunk size in characters (not tokens).
     # nomic-embed-text handles ~8192 tokens. 1 token ≈ 4 chars.
-    # We aim for ~1500 chars (~375 tokens) per chunk for granularity.
-    chunk_target_chars: int = 1000
-    chunk_max_chars: int = 2000
-    chunk_min_chars: int = 100  # skip tiny fragments
+    # We aim for ~2000 chars (~500 tokens) per chunk — halves embedding API calls.
+    chunk_target_chars: int = 2000
+    chunk_max_chars: int = 4000
+    chunk_min_chars: int = 200  # skip tiny fragments
 
     # ── Indexing Behavior ──────────────────────────────────────────────
-    batch_size: int = 100  # ChromaDB upsert batch size (increased for Pi)
+    batch_size: int = 200  # ChromaDB upsert batch size
     max_file_size_bytes: int = 500_000  # 500KB — skip huge files
     hash_algorithm: str = "sha256"
-    log_every_n_files: int = 25  # Log more frequently for progress tracking
+    log_every_n_files: int = 1  # Log progress after every file
 
     # ── Directories to index (relative to library_root) ────────────────
     index_paths: list = field(default_factory=lambda: [

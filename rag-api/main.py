@@ -71,12 +71,18 @@ class SearchResponse(BaseModel):
     duration_ms: int
 
 
+class HistoryMessage(BaseModel):
+    role: str = Field(..., description="'user' or 'assistant'")
+    content: str = Field(..., description="Message content")
+
+
 class GenerateRequest(BaseModel):
     brief: str = Field(..., description="Description of what to generate")
     task: str = Field("component", description="Task type: hero, page, component, seo_rewrite")
     framework: str | None = Field(None, description="Filter RAG context by framework")
     n_context: int = Field(3, ge=0, le=10, description="Number of RAG context chunks to use")
     temperature: float = Field(0.7, ge=0.0, le=1.0, description="LLM sampling temperature")
+    history: list[HistoryMessage] = Field(default_factory=list, description="Prior conversation turns for multi-turn refinement")
 
 
 class GenerateResponse(BaseModel):
@@ -85,6 +91,7 @@ class GenerateResponse(BaseModel):
     model: str
     duration_ms: int
     task: str
+    history: list[HistoryMessage] = Field(description="Updated conversation history — pass this back in the next request")
 
 
 class TemplateItem(BaseModel):
@@ -92,6 +99,7 @@ class TemplateItem(BaseModel):
     framework: str
     repo_name: str
     preview: str
+    text: str
 
 
 class TemplatesResponse(BaseModel):
@@ -286,11 +294,12 @@ async def generate(req: GenerateRequest):
         context_chunks=context_chunks,
     )
 
-    # Step 4: Generate code with LLM
+    # Step 4: Generate code with LLM (inject prior conversation history)
     llm_result = chat.generate(
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         temperature=req.temperature,
+        history=[{"role": m.role, "content": m.content} for m in req.history],
     )
 
     if llm_result.get("error"):
@@ -311,12 +320,19 @@ async def generate(req: GenerateRequest):
     code = llm_result["content"]
     code = _strip_code_fences(code)
 
+    # Build updated history for the client to store and send back next turn
+    updated_history = list(req.history) + [
+        HistoryMessage(role="user", content=req.brief),
+        HistoryMessage(role="assistant", content=code),
+    ]
+
     return GenerateResponse(
         code=code,
         context_used=context_chunks,
         model=llm_result["model"],
         duration_ms=duration_ms,
         task=req.task,
+        history=updated_history,
     )
 
 
@@ -356,6 +372,7 @@ async def list_templates(category: str):
             framework=r.framework,
             repo_name=r.repo_name or "",
             preview=r.text[:200].strip(),
+            text=r.text,
         )
         for r in seen_files.values()
     ]

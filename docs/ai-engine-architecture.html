@@ -395,7 +395,7 @@ body::before {
     <div class="pipeline-step">
       <div class="step-icon">🤖</div>
       <div class="step-name">Generate</div>
-      <div class="step-detail">qwen2.5-coder:3b<br>context-injected output</div>
+      <div class="step-detail">qwen2.5-coder:3b<br>history + context injection</div>
     </div>
   </div>
 </div>
@@ -437,7 +437,7 @@ body::before {
       <!-- rag-api/main.py -->
       <rect x="500" y="58" width="175" height="56" rx="5" fill="#12151c" stroke="#34d399" stroke-opacity="0.35"/>
       <text x="587" y="82" text-anchor="middle" fill="#e8ecf2" font-family="JetBrains Mono, monospace" font-size="10.5" font-weight="600">rag-api/main.py</text>
-      <text x="587" y="104" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="8">FastAPI · 387 LOC</text>
+      <text x="587" y="104" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="8">FastAPI · 400 LOC</text>
 
       <!-- mcp-server/server.py -->
       <rect x="725" y="58" width="185" height="56" rx="5" fill="#12151c" stroke="#a78bfa" stroke-opacity="0.35"/>
@@ -489,7 +489,7 @@ body::before {
       <!-- llm.py -->
       <rect x="275" y="468" width="175" height="56" rx="5" fill="#12151c" stroke="#34d399" stroke-opacity="0.35"/>
       <text x="362" y="492" text-anchor="middle" fill="#e8ecf2" font-family="JetBrains Mono, monospace" font-size="10.5" font-weight="600">rag-api/llm.py</text>
-      <text x="362" y="514" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="8">Ollama chat · 124 LOC</text>
+      <text x="362" y="514" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono, monospace" font-size="8">Ollama chat · 130 LOC</text>
 
       <!-- prompts.py -->
       <rect x="500" y="468" width="175" height="56" rx="5" fill="#12151c" stroke="#34d399" stroke-opacity="0.35"/>
@@ -671,15 +671,16 @@ body::before {
         <div class="card-icon">🌐</div>
         <div>
           <div class="card-title">RAG API · FastAPI</div>
-          <div class="card-file">rag-api/main.py · 387 LOC</div>
+          <div class="card-file">rag-api/main.py · 400 LOC</div>
         </div>
       </div>
       <div class="card-body">
         REST endpoints: /search, /generate, /templates/{cat}, /seo/audit, /health. CORS-enabled, served via nginx.
         <ul>
           <li>POST /search → embed + vector query</li>
-          <li>POST /generate → RAG + LLM pipeline</li>
-          <li>GET /templates/{cat} → deduped by file</li>
+          <li>POST /generate → RAG + LLM + history</li>
+          <li>GET /templates/{cat} → deduped, full text</li>
+          <li>HistoryMessage model — stateless multi-turn</li>
         </ul>
         <ul style="margin-top:0.3rem;">
           <li style="color:var(--accent-blue)"><strong>imports:</strong> config, embeddings, store, llm, prompts, seo</li>
@@ -916,13 +917,14 @@ body::before {
         <div class="card-icon">💬</div>
         <div>
           <div class="card-title">llm.py</div>
-          <div class="card-file">Ollama chat client · 124 LOC</div>
+          <div class="card-file">Ollama chat client · 130 LOC</div>
         </div>
       </div>
       <div class="card-body">
         Thin wrapper around /api/chat for code generation. Non-streaming, 600s timeout.
         <ul>
-          <li>System + User message pair</li>
+          <li>System + history[] + User message chain</li>
+          <li>Multi-turn conversation history injection</li>
           <li>Temperature configurable (default 0.7)</li>
           <li>Structured error returns</li>
         </ul>

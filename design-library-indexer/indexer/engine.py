@@ -16,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .autotune import choose_worker_count
+from .autotune import choose_worker_count, get_cpu_temp
 from .chunker import Chunker
 from .config import IndexerConfig
 from .discovery import FileDiscovery, DiscoveredFile
@@ -95,16 +95,43 @@ class IndexerEngine:
         batch_metadatas: list[dict] = []
         progress_start = time.monotonic()
 
+        # Choose worker count once at startup; re-check every 50 files for thermal protection
+        workers = choose_worker_count(max_workers=3, min_workers=1, default_workers=3)
+        autotune_interval = 50
+        throttled = False  # True when held at 2 workers due to high temp
+
         for discovered_file in self.discovery.discover(incremental=incremental):
             self._process_file(
                 discovered_file,
                 batch_ids, batch_embeddings, batch_documents, batch_metadatas,
+                workers=workers,
             )
 
             # Log progress
             processed = self._stats["files_processed"]
             if total_files > 0 and processed % self.config.log_every_n_files == 0:
                 self._log_progress(processed, total_files, progress_start)
+
+            # Re-evaluate workers periodically for thermal protection (not every file)
+            if processed > 0 and processed % autotune_interval == 0:
+                temp = get_cpu_temp()
+                if temp is not None:
+                    if temp > 75:
+                        # Throttle: hold at 2 workers until temp recovers
+                        workers = 2
+                        if not throttled:
+                            throttled = True
+                            logger.warning(f"Thermal throttle: {temp:.0f}°C > 75°C — workers capped at 2")
+                    elif throttled and temp < 65:
+                        # Recovery: temp dropped below 65°C, restore full workers
+                        throttled = False
+                        workers = choose_worker_count(max_workers=3, min_workers=1, default_workers=3)
+                        logger.info(f"Thermal recovery: {temp:.0f}°C < 65°C — workers restored to {workers}")
+                    elif not throttled:
+                        workers = choose_worker_count(max_workers=3, min_workers=1, default_workers=3)
+                else:
+                    if not throttled:
+                        workers = choose_worker_count(max_workers=3, min_workers=1, default_workers=3)
 
             # Flush batch when it hits the configured size
             if len(batch_ids) >= self.config.batch_size:
@@ -145,6 +172,7 @@ class IndexerEngine:
         batch_embeddings: list[list[float]],
         batch_documents: list[str],
         batch_metadatas: list[dict],
+        workers: int = 3,
     ) -> None:
         """Process a single file: read → chunk → embed → add to batch."""
 
@@ -188,13 +216,7 @@ class IndexerEngine:
 
         self._stats["chunks_created"] += len(chunks_data)
 
-        # ── Embed chunks in parallel with adaptive worker count ──
-        workers = choose_worker_count(
-            max_workers=3,
-            min_workers=1,
-            default_workers=2
-        )
-
+        # ── Embed chunks in parallel ──
         # Prepare embedding tasks
         embed_tasks = []
         for chunk_data in chunks_data:

@@ -94,7 +94,10 @@ document.getElementById('search-form').addEventListener('submit', async (e) => {
             return;
         }
 
-        results.innerHTML = data.results.map(r => `
+        const searchCodeMap = {};
+        results.innerHTML = data.results.map((r, i) => {
+            searchCodeMap[i] = r.text;
+            return `
             <div class="result-card">
                 <div class="result-header">
                     <span class="result-path">${escapeHtml(r.file_path)}</span>
@@ -106,10 +109,13 @@ document.getElementById('search-form').addEventListener('submit', async (e) => {
                 </div>
                 <div class="result-code"><pre>${escapeHtml(r.text)}</pre></div>
                 <div class="result-actions">
-                    <button class="btn btn-sm btn-ghost" onclick="copyToClipboard(${escapeHtml(JSON.stringify(JSON.stringify(r.text)))})">Copy Code</button>
+                    <button class="btn btn-sm btn-ghost copy-search-btn" data-index="${i}">Copy Code</button>
                 </div>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
+        results.querySelectorAll('.copy-search-btn').forEach(btn => {
+            btn.addEventListener('click', () => copyToClipboard(searchCodeMap[btn.dataset.index]));
+        });
     } catch (err) {
         meta.innerHTML = '';
         results.innerHTML = `<div class="error-msg">Network error: ${escapeHtml(err.message)}</div>`;
@@ -230,7 +236,10 @@ document.getElementById('templates-load').addEventListener('click', async () => 
             return;
         }
 
-        grid.innerHTML = data.templates.map(t => `
+        const templateCodeMap = {};
+        grid.innerHTML = data.templates.map((t, i) => {
+            templateCodeMap[i] = t.text;
+            return `
             <div class="template-card">
                 <div class="template-card-header">
                     <span class="template-card-path" title="${escapeHtml(t.file_path)}">${escapeHtml(t.file_path.split('/').slice(-2).join('/'))}</span>
@@ -238,10 +247,13 @@ document.getElementById('templates-load').addEventListener('click', async () => 
                 </div>
                 <pre>${escapeHtml(t.preview)}</pre>
                 <div class="result-actions">
-                    <button class="btn btn-sm btn-ghost" onclick="copyToClipboard(${escapeHtml(JSON.stringify(JSON.stringify(t.preview)))})">Copy</button>
+                    <button class="btn btn-sm btn-ghost copy-template-btn" data-index="${i}">Copy Full Code</button>
                 </div>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
+        grid.querySelectorAll('.copy-template-btn').forEach(btn => {
+            btn.addEventListener('click', () => copyToClipboard(templateCodeMap[btn.dataset.index]));
+        });
     } catch (err) {
         meta.innerHTML = '';
         grid.innerHTML = `<div class="error-msg">Network error: ${escapeHtml(err.message)}</div>`;

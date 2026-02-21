@@ -159,18 +159,16 @@ def choose_worker_count(
                 logger.debug(f"Auto-tune: Low RAM ({free_ram_gb:.1f}GB free) → decrease workers")
 
         # Temperature Analysis (Raspberry Pi specific)
+        # Throttle at >75°C. Engine manages hysteresis: holds at 2 workers until <65°C.
         if temp_c is not None:
-            if temp_c > 82:  # Critical temperature
-                workers = min_workers
-                logger.warning(f"Auto-tune: Critical temp ({temp_c:.0f}°C) → minimum workers")
-            elif temp_c > 78:  # High temperature
+            if temp_c > 75:  # Throttle threshold — engine will cap to 2 workers
                 workers = min(workers - 1, default_workers - 1)
                 logger.warning(f"Auto-tune: High temp ({temp_c:.0f}°C) → decrease workers")
-            elif temp_c > 70:  # Caution zone
-                workers = min(workers, default_workers)  # Don't increase
-                logger.debug(f"Auto-tune: Warm temp ({temp_c:.0f}°C) → keep current workers")
+            elif temp_c > 65:  # Caution zone — don't increase
+                workers = min(workers, default_workers)
+                logger.debug(f"Auto-tune: Warm temp ({temp_c:.0f}°C) → hold current workers")
         else:
-            # No temperature sensor - assume safe temp (60°C)
+            # No temperature sensor - assume safe temp
             logger.debug("Auto-tune: Temperature unavailable, assuming safe")
 
         # ── CLAMP RESULT ──
