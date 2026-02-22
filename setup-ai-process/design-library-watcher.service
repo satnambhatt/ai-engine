@@ -30,7 +30,7 @@ CPUQuota=50%
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=/mnt/design-library/.index /mnt/design-library/chroma_data /home/rpi/ai-engine/design-library/.index /home/rpi/ai-engine/chroma_data /home/rpi/ai-engine/logs
+ReadWritePaths=-/mnt/design-library/.index -/mnt/design-library/chroma_data -/home/rpi/ai-engine/design-library/.index -/home/rpi/ai-engine/chroma_data /home/rpi/ai-engine/logs
 
 [Install]
 WantedBy=multi-user.target
