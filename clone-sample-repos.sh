@@ -65,7 +65,7 @@ case $CLONE_REPOS in
     clone_tailwind
   ;;
 
-  multi_page)
+  multipage)
     clone_multi_page
   ;;
 

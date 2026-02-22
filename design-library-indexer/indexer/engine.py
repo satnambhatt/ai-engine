@@ -224,7 +224,10 @@ class IndexerEngine:
             embed_text = f"{embed_prefix}\n\n{chunk_data['text']}"
             embed_tasks.append((chunk_data, embed_text))
 
-        # Parallel embedding with ThreadPoolExecutor
+        # Parallel embedding with ThreadPoolExecutor.
+        # EmbeddingClient._ollama_lock ensures only one HTTP request reaches
+        # Ollama at a time, so workers prepare text in parallel without
+        # stacking up connections that cause timeout warnings.
         with ThreadPoolExecutor(max_workers=workers) as executor:
             # Submit all embedding tasks
             futures = {

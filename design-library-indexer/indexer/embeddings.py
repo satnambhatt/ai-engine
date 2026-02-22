@@ -6,6 +6,7 @@ Handles batching, retries, and connection errors gracefully.
 """
 
 import logging
+import threading
 import time
 from dataclasses import dataclass
 
@@ -34,6 +35,10 @@ class EmbeddingClient:
         self.model = config.embedding_model
         self._session = requests.Session()
         self._session.headers.update({"Content-Type": "application/json"})
+        # Ollama processes one request at a time. This lock prevents 3 worker
+        # threads from queuing simultaneous HTTP connections, which causes
+        # Ollama to drop or timeout waiting connections under load.
+        self._ollama_lock = threading.Lock()
 
     def health_check(self) -> bool:
         """Verify Ollama is running and the embedding model is available."""
@@ -88,19 +93,20 @@ class EmbeddingClient:
 
         for attempt in range(max_retries):
             try:
-                start = time.monotonic()
-                resp = self._session.post(
-                    f"{self.base_url}/api/embed",
-                    json={
-                        "model": self.model,
-                        "input": text,
-                    },
-                    timeout=600,  # 10 minutes for Raspberry Pi hardware
-                )
-                resp.raise_for_status()
-                duration_ms = (time.monotonic() - start) * 1000
+                with self._ollama_lock:
+                    start = time.monotonic()
+                    resp = self._session.post(
+                        f"{self.base_url}/api/embed",
+                        json={
+                            "model": self.model,
+                            "input": text,
+                        },
+                        timeout=600,  # 10 minutes for Raspberry Pi hardware
+                    )
+                    resp.raise_for_status()
+                    duration_ms = (time.monotonic() - start) * 1000
+                    data = resp.json()
 
-                data = resp.json()
                 embeddings = data.get("embeddings", [])
                 if not embeddings or not embeddings[0]:
                     logger.warning(f"Empty embedding returned for text ({len(text)} chars)")
@@ -120,7 +126,8 @@ class EmbeddingClient:
                 logger.warning(f"Embedding request timed out (attempt {attempt + 1}/{max_retries})")
                 time.sleep(2 ** attempt)
             except requests.HTTPError as e:
-                logger.error(f"Ollama API error: {e}")
+                body = resp.text[:300] if resp.text else "(empty)"
+                logger.error(f"Ollama API error: {e} | response: {body} | text_len: {len(text)}")
                 if resp.status_code >= 500:
                     time.sleep(2 ** attempt)
                     continue
