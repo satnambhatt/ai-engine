@@ -36,7 +36,16 @@ VENV_DIR="${ENGINE_DIR}/venv"
 LOG_DIR="${ENGINE_DIR}/logs"
 REQUIREMENTS="${INDEXER_DIR}/requirements.txt"
 
-LIBRARY_ROOT="/mnt/design-library"
+# Load storage config from .env (written by setup.sh)
+ENV_FILE="${ENGINE_DIR}/.env"
+if [ -f "${ENV_FILE}" ]; then
+    # shellcheck source=/dev/null
+    set -o allexport; source "${ENV_FILE}"; set +o allexport
+fi
+
+# Fallback defaults if .env is missing
+LIBRARY_ROOT="${LIBRARY_ROOT:-/mnt/design-library}"
+CHROMA_DIR="${CHROMA_DIR:-/mnt/design-library/chroma_data}"
 OLLAMA_URL="http://localhost:11434"
 EMBEDDING_MODEL="nomic-embed-text"
 
@@ -219,7 +228,7 @@ echo "======================================================="
 echo ""
 echo "  Ollama:       ${OLLAMA_URL} (${EMBEDDING_MODEL})"
 echo "  Library root: ${LIBRARY_ROOT}"
-echo "  ChromaDB:     ${ENGINE_DIR}/chroma_data"
+echo "  ChromaDB:     ${CHROMA_DIR}"
 echo "  Venv:         ${VENV_DIR}"
 echo ""
 if [ -n "${INDEX_PID}" ]; then

@@ -2,19 +2,48 @@
 Indexer configuration — all tunable settings in one place.
 """
 
+import os
 from pathlib import Path
 from dataclasses import dataclass, field
+
+_EXTERNAL_BASE = Path("/mnt/design-library")
+_LOCAL_BASE = Path("/home/rpi/ai-engine")
+
+
+def _use_external_drive() -> bool:
+    """Read USE_EXTERNAL_DRIVE from env. Defaults to True (external drive)."""
+    return os.environ.get("USE_EXTERNAL_DRIVE", "true").lower() not in ("false", "0", "no")
 
 
 @dataclass
 class IndexerConfig:
     """Central configuration for the design library indexer."""
 
-    # ── Paths ──────────────────────────────────────────────────────────
-    library_root: Path = Path("/mnt/design-library")
-    index_metadata_dir: Path = Path("/mnt/design-library/.index")
-    chroma_persist_dir: Path = Path("/home/rpi/ai-engine/chroma_data")
+    # ── Storage mode ───────────────────────────────────────────────────
+    # Set USE_EXTERNAL_DRIVE=false in /home/rpi/ai-engine/.env (or env)
+    # to store everything under /home/rpi/ai-engine/ instead.
+    use_external_drive: bool = field(default_factory=_use_external_drive)
+
+    # ── Paths — computed in __post_init__ based on use_external_drive ──
+    # Can be overridden after construction (e.g. config.library_root = Path(...))
+    library_root: Path = field(default=None)
+    index_metadata_dir: Path = field(default=None)
+    chroma_persist_dir: Path = field(default=None)
     chroma_collection_name: str = "design_library"
+
+    def __post_init__(self):
+        if self.library_root is None:
+            self.library_root = (
+                _EXTERNAL_BASE if self.use_external_drive
+                else _LOCAL_BASE / "design-library"
+            )
+        if self.index_metadata_dir is None:
+            self.index_metadata_dir = self.library_root / ".index"
+        if self.chroma_persist_dir is None:
+            self.chroma_persist_dir = (
+                _EXTERNAL_BASE / "chroma_data" if self.use_external_drive
+                else _LOCAL_BASE / "chroma_data"
+            )
 
     # ── Ollama ─────────────────────────────────────────────────────────
     ollama_base_url: str = "http://localhost:11434"

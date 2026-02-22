@@ -97,9 +97,34 @@ FastAPI server on port 8000 providing:
 |----------|--------|-------------|
 | `/health` | GET | System status (Ollama, ChromaDB, chunk count) |
 | `/search` | POST | Semantic search across the design library |
-| `/generate` | POST | RAG-powered code generation from a brief |
-| `/templates/{category}` | GET | List templates by category |
+| `/generate` | POST | RAG-powered code generation from a brief (supports conversation history) |
+| `/templates/{category}` | GET | List templates by category (returns full chunk text) |
 | `/seo/audit` | POST | SEO audit on HTML content |
+
+### Multi-turn Generation (Conversation History)
+
+`/generate` supports multi-turn refinement. Pass the `history` array returned from each response back in the next request — the LLM sees prior turns and refines rather than starting fresh:
+
+```bash
+# First request — no history needed
+curl -s http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -d '{"brief": "Dark hero section with CTA button", "task": "hero"}'
+
+# Follow-up — paste the history array from the previous response
+curl -s http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "brief": "Make the background deeper black and add a gradient",
+    "task": "hero",
+    "history": [
+      {"role": "user", "content": "Dark hero section with CTA button"},
+      {"role": "assistant", "content": "<section>...</section>"}
+    ]
+  }'
+```
+
+Each response includes an updated `history` array — store it client-side and send it back with the next request.
 
 ### Start the API
 
@@ -158,6 +183,32 @@ sudo ./setup.sh
 
 # To also enable systemd services on boot:
 sudo ENABLE_SERVICES=true ./setup.sh
+```
+
+`setup.sh` will prompt whether you have an external USB drive and write `/home/rpi/ai-engine/.env` accordingly. All components read this file at startup.
+
+### Storage Configuration
+
+Storage mode is controlled by `/home/rpi/ai-engine/.env`:
+
+```bash
+# External USB drive (default)
+USE_EXTERNAL_DRIVE=true
+LIBRARY_ROOT=/mnt/design-library
+CHROMA_DIR=/mnt/design-library/chroma_data
+
+# Local storage (no external drive)
+USE_EXTERNAL_DRIVE=false
+LIBRARY_ROOT=/home/rpi/ai-engine/design-library
+CHROMA_DIR=/home/rpi/ai-engine/chroma_data
+```
+
+To switch storage mode, edit `.env` and restart all services. To migrate an existing ChromaDB to the external drive:
+
+```bash
+mv /home/rpi/ai-engine/chroma_data /mnt/design-library/chroma_data
+sudo systemctl daemon-reload
+sudo systemctl restart design-library-watcher
 ```
 
 ### 2. Index your library
@@ -346,11 +397,14 @@ cd /home/rpi/ai-engine/design-library-indexer
 ## Monitoring
 
 ```bash
-# Watch indexing logs
+# Watch indexing logs (logs every file — set log_every_n_files in config.py to change)
 tail -f /home/rpi/ai-engine/logs/indexer-manual.log
 
 # Watch auto-tuning decisions
 tail -f /home/rpi/ai-engine/logs/indexer-manual.log | grep "Auto-tune"
+
+# Watch thermal throttle events (triggers at >75°C, recovers at <65°C)
+tail -f /home/rpi/ai-engine/logs/indexer-manual.log | grep -E "Thermal|throttle|recovery"
 
 # Watch file watcher
 tail -f /home/rpi/ai-engine/logs/watcher.log
@@ -412,11 +466,13 @@ uptime
 │   ├── frontend.md            # Frontend setup guide
 │   └── mcp-server.md          # MCP server setup guide
 ├── venv/                       # Python virtual environment
-├── chroma_data/                # Vector database
+├── chroma_data/                # Vector database (local mode only)
 ├── logs/                       # Application logs
+├── .env                        # Storage config (written by setup.sh)
 └── search.sh                   # Quick search helper
 
-/mnt/design-library/            # Your design files (USB SSD)
+/mnt/design-library/            # Your design files (USB SSD, external drive mode)
+├── chroma_data/                # Vector database (external drive mode)
 └── .index/file_hashes.json     # Change tracking
 ```
 
@@ -430,8 +486,18 @@ HTML `<head>` boilerplate is indexed with `section_type="head-meta"` and **exclu
 
 Adjust `chunk_target_chars` in `indexer/config.py` to control granularity:
 - **Smaller** (e.g. 500) = more granular search, slower indexing
-- **Larger** (e.g. 1500) = faster indexing, broader matches
-- **Default**: 1000
+- **Larger** (e.g. 3000) = faster indexing, broader matches
+- **Default**: 2000 (tuned for Pi — halves embedding API calls vs original 1000)
+
+Current performance settings in `config.py`:
+
+| Setting | Value | Effect |
+|---------|-------|--------|
+| `chunk_target_chars` | 2000 | ~50% fewer embedding API calls vs 1000 |
+| `chunk_max_chars` | 4000 | Allows larger natural chunks |
+| `chunk_min_chars` | 200 | Skips tiny fragments |
+| `batch_size` | 200 | Fewer ChromaDB upsert round-trips |
+| `log_every_n_files` | 1 | Progress logged after every file |
 
 After changing config, run a full re-index:
 
@@ -450,14 +516,16 @@ Drop git repos into `/mnt/design-library/example-websites/` — the watcher dete
 
 - **Semantic search** - Find code by describing what you want
 - **RAG code generation** - Generate UI code using design library context
-- **Web UI** - Browser-based interface accessible from any device on LAN
+- **Conversation history** - Multi-turn refinement: "make it darker", "add a nav bar" without repeating the full brief
+- **Web UI** - Browser-based interface accessible from any device on LAN; copy full code from search results and templates
 - **MCP IDE integration** - Use RAG tools directly in Claude Code / VS Code
 - **SEO audit** - Score HTML against 11 SEO rules
 - **Head-meta filtering** - Excludes HTML `<head>` boilerplate from search results by default
-- **Adaptive worker auto-tuning** - 40-70% faster indexing based on CPU/RAM/temperature
+- **Adaptive worker auto-tuning** - 3 workers on 4-core Pi (1 reserved for OS); re-evaluated every 50 files
+- **Thermal protection** - Throttles to 2 workers above 75°C; restores to 3 once below 65°C (hysteresis)
 - **Incremental indexing** - Only processes new or changed files
 - **Resume support** - Stop and restart anytime without losing progress
-- **Thermal protection** - Automatically reduces load when Pi gets hot
+- **Storage flexibility** - External USB drive or local storage, configured via `.env`
 - **Framework detection** - Categorizes React, Vue, Next.js, Astro, Svelte, etc.
 - **Real-time watching** - Auto-indexes files as you add them
 

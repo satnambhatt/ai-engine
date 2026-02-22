@@ -11,8 +11,11 @@ Group=rpi
 WorkingDirectory=/home/rpi/ai-engine/design-library-indexer
 Environment="CHROMA_TELEMETRY=FALSE"
 Environment="ANONYMIZED_TELEMETRY=FALSE"
+Environment="LIBRARY_ROOT=/mnt/design-library"
+Environment="CHROMA_DIR=/mnt/design-library/chroma_data"
+EnvironmentFile=-/home/rpi/ai-engine/.env
 ExecStart=/home/rpi/ai-engine/venv/bin/python watch_library.py \
-    --library-root /mnt/design-library \
+    --library-root ${LIBRARY_ROOT} \
     --debounce 30
 Restart=on-failure
 RestartSec=10
@@ -27,7 +30,7 @@ CPUQuota=50%
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=/mnt/design-library/.index /home/rpi/ai-engine/chroma_data /home/rpi/ai-engine/logs
+ReadWritePaths=/mnt/design-library/.index /mnt/design-library/chroma_data /home/rpi/ai-engine/design-library/.index /home/rpi/ai-engine/chroma_data /home/rpi/ai-engine/logs
 
 [Install]
 WantedBy=multi-user.target
