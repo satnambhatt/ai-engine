@@ -16,7 +16,7 @@ set -euo pipefail
 #
 # Prerequisites:
 #   Clone this repository first:
-#     cd /home/rpi/ai-engine
+#     cd /home/<your-user>/ai-engine
 #     git clone https://github.com/YOUR_USERNAME/design-library-indexer.git
 #     cd design-library-indexer
 #
@@ -34,7 +34,23 @@ set -euo pipefail
 #
 # ══════════════════════════════════════════════════════════════
 
-ENGINE_DIR="/home/rpi/ai-engine"
+# Determine the actual (non-root) user who invoked this script
+if [ -n "${SUDO_USER:-}" ] && [ "${SUDO_USER}" != "root" ]; then
+    ACTUAL_USER="${SUDO_USER}"
+elif [ -n "${USER:-}" ] && [ "${USER}" != "root" ]; then
+    ACTUAL_USER="${USER}"
+else
+    ACTUAL_USER=$(logname 2>/dev/null || true)
+    if [ -z "${ACTUAL_USER}" ] || [ "${ACTUAL_USER}" = "root" ]; then
+        echo "ERROR: Could not determine a non-root user."
+        echo "  Run as: sudo ./setup.sh  (from a non-root account)"
+        echo "  Or set: sudo ACTUAL_USER=youruser ./setup.sh"
+        exit 1
+    fi
+fi
+
+USER_HOME=$(eval echo "~${ACTUAL_USER}")
+ENGINE_DIR="${USER_HOME}/ai-engine"
 VENV_DIR="${ENGINE_DIR}/venv"
 ENABLE_SERVICES="${ENABLE_SERVICES:-false}"
 ENV_FILE="${ENGINE_DIR}/.env"
@@ -184,8 +200,8 @@ else
     echo "  Directory structure created."
 fi
 
-chown -R rpi:rpi "${LIBRARY_ROOT}"
-mkdir -p "${CHROMA_DIR}" && chown -R rpi:rpi "${CHROMA_DIR}"
+chown -R "${ACTUAL_USER}:${ACTUAL_USER}" "${LIBRARY_ROOT}"
+mkdir -p "${CHROMA_DIR}" && chown -R "${ACTUAL_USER}:${ACTUAL_USER}" "${CHROMA_DIR}"
 
 # ── 4. Install Ollama + pull models ─────────────────────────
 echo ""
@@ -202,10 +218,10 @@ systemctl start ollama 2>/dev/null || ollama serve &>/dev/null &
 sleep 3
 
 echo "  Pulling embedding model (nomic-embed-text)..."
-sudo -u rpi ollama pull nomic-embed-text
+sudo -u "${ACTUAL_USER}" ollama pull nomic-embed-text
 
 echo "  Pulling code generation model (qwen2.5-coder:3b)..."
-sudo -u rpi ollama pull qwen2.5-coder:3b
+sudo -u "${ACTUAL_USER}" ollama pull qwen2.5-coder:3b
 
 echo "  Models ready."
 
@@ -215,11 +231,11 @@ echo "[5/6] Setting up Python environment..."
 
 # Create logs directory
 mkdir -p "${ENGINE_DIR}/logs"
-chown -R rpi:rpi "${ENGINE_DIR}"
+chown -R "${ACTUAL_USER}:${ACTUAL_USER}" "${ENGINE_DIR}"
 
 # Create virtual environment
 if [ ! -d "${VENV_DIR}" ]; then
-    sudo -u rpi python3 -m venv "${VENV_DIR}"
+    sudo -u "${ACTUAL_USER}" python3 -m venv "${VENV_DIR}"
     echo "  Virtual environment created at ${VENV_DIR}"
 else
     echo "  Virtual environment already exists at ${VENV_DIR}"
@@ -228,7 +244,7 @@ fi
 # Install Python dependencies from the cloned repo
 if [ -f "${INDEXER_DIR}/requirements.txt" ]; then
     echo "  Installing Python dependencies..."
-    sudo -u rpi "${VENV_DIR}/bin/pip" install -q -r "${INDEXER_DIR}/requirements.txt"
+    sudo -u "${ACTUAL_USER}" "${VENV_DIR}/bin/pip" install -q -r "${INDEXER_DIR}/requirements.txt"
     echo "  Dependencies installed."
 else
     echo "  WARNING: requirements.txt not found in ${INDEXER_DIR}"
