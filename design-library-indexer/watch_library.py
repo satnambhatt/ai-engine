@@ -48,6 +48,7 @@ class DebouncedIndexHandler(FileSystemEventHandler):
         self.debounce_seconds = debounce_seconds
         self._timer: Timer | None = None
         self._pending_changes: set[str] = set()
+        self._running = False  # True while an index run is in progress
 
         # Extensions we care about
         self._watched_extensions = config.code_extensions | config.config_extensions
@@ -87,6 +88,11 @@ class DebouncedIndexHandler(FileSystemEventHandler):
 
     def _run_index(self) -> None:
         """Execute incremental indexing after debounce period."""
+        if self._running:
+            logger.info("Index already in progress — new changes will be picked up after it finishes.")
+            return
+
+        self._running = True
         n_changes = len(self._pending_changes)
         logger.info(f"Debounce complete. {n_changes} files changed. Starting incremental index...")
         self._pending_changes.clear()
@@ -99,6 +105,13 @@ class DebouncedIndexHandler(FileSystemEventHandler):
                         f"stored {stats['chunks_stored']} chunks.")
         except Exception as e:
             logger.error(f"Indexing failed: {e}", exc_info=True)
+        finally:
+            self._running = False
+            # If changes accumulated while we were indexing, schedule another run
+            if self._pending_changes:
+                logger.info(f"{len(self._pending_changes)} changes accumulated during run — scheduling follow-up index.")
+                self._timer = Timer(self.debounce_seconds, self._run_index)
+                self._timer.start()
 
 
 def main():
