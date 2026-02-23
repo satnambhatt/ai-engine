@@ -183,13 +183,15 @@ See [docs/mcp-server.md](docs/mcp-server.md) for full tool reference and trouble
 ```bash
 cd $HOME/ai-engine
 chmod +x setup.sh
+
+# Full setup (deps, Ollama, Python env) — prompts for service install at the end
 sudo ./setup.sh
 
-# To also enable systemd services on boot:
-sudo ENABLE_SERVICES=true ./setup.sh
+# Install/configure systemd services only (skips apt, Ollama, Python steps)
+sudo ./setup.sh --services-only
 ```
 
-`setup.sh` will prompt whether you have an external USB drive and write `$HOME/ai-engine/.env` accordingly. All components read this file at startup.
+`setup.sh` will prompt whether you have an external USB drive and write `$HOME/ai-engine/.env` accordingly. All components read this file at startup. The services step is interactive — it shows current service status and asks whether to install, enable on boot, and start now.
 
 ### Storage Configuration
 
@@ -442,7 +444,7 @@ uptime
 
 ```
 $HOME/ai-engine/
-├── setup.sh                    # One-time setup script (Pi 4)
+├── setup.sh                    # Setup script: full install or --services-only
 ├── design-library-indexer/     # Indexer application (GitHub repo)
 │   ├── indexer/                # Python modules
 │   │   ├── autotune.py        # Adaptive worker auto-tuning
