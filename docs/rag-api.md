@@ -29,16 +29,16 @@ Brief ("hero section for SaaS landing page")
 ### Start the server
 
 ```bash
-cd /home/rpi/ai-engine/rag-api
-/home/rpi/ai-engine/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
+cd $HOME/ai-engine/rag-api
+$HOME/ai-engine/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
 ### Start in background
 
 ```bash
-cd /home/rpi/ai-engine/rag-api
-nohup /home/rpi/ai-engine/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 \
-  > /home/rpi/ai-engine/logs/rag-api.log 2>&1 &
+cd $HOME/ai-engine/rag-api
+nohup $HOME/ai-engine/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 \
+  > $HOME/ai-engine/logs/rag-api.log 2>&1 &
 ```
 
 ### Health check
@@ -255,7 +255,7 @@ Complete prompt sent to qwen2.5-coder:3b
 
 ### Customizing prompts
 
-Edit `/home/rpi/ai-engine/rag-api/prompts.py` to:
+Edit `$HOME/ai-engine/rag-api/prompts.py` to:
 - Modify system prompts per task type
 - Update design rules
 - Add new task types
@@ -265,8 +265,8 @@ Edit `/home/rpi/ai-engine/rag-api/prompts.py` to:
 ### Run end-to-end test
 
 ```bash
-cd /home/rpi/ai-engine/rag-api
-/home/rpi/ai-engine/venv/bin/python test_pipeline.py
+cd $HOME/ai-engine/rag-api
+$HOME/ai-engine/venv/bin/python test_pipeline.py
 ```
 
 Tests the full pipeline: embed -> search -> prompt build -> generate -> SEO audit.
@@ -313,7 +313,7 @@ The API reads configuration from `IndexerConfig` defaults:
 | Ollama URL | http://localhost:11434 | Ollama API endpoint |
 | Embedding model | nomic-embed-text | 768-dim embeddings |
 | Chat model | qwen2.5-coder:3b | Code generation LLM |
-| ChromaDB path | /home/rpi/ai-engine/chroma_data | Vector database |
+| ChromaDB path | $HOME/ai-engine/chroma_data | Vector database |
 | API port | 8000 | FastAPI server port |
 | LLM timeout | 600s | Max generation time |
 
@@ -342,7 +342,7 @@ ollama serve --host 0.0.0.0:11434
 ## File Structure
 
 ```
-/home/rpi/ai-engine/rag-api/
+$HOME/ai-engine/rag-api/
 ├── main.py              # FastAPI app with all endpoints
 ├── llm.py               # Ollama chat client wrapper
 ├── prompts.py           # System prompts + design rules

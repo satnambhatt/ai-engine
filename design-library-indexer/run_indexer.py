@@ -25,6 +25,7 @@ Usage:
 import argparse
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
@@ -40,7 +41,7 @@ def setup_logging(verbose: bool = False) -> None:
     level = logging.DEBUG if verbose else logging.INFO
 
     # Create logs directory if it doesn't exist
-    log_dir = Path("/home/rpi/ai-engine/logs")
+    log_dir = Path.home() / "ai-engine" / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
 
     # Console handler
@@ -211,7 +212,25 @@ def build_config(args) -> IndexerConfig:
     return config
 
 
+def _load_env_file() -> None:
+    """Load ~/ai-engine/.env into os.environ (if it exists and not already set)."""
+    env_path = Path.home() / "ai-engine" / ".env"
+    if not env_path.exists():
+        return
+    with open(env_path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key = key.strip()
+            value = value.strip()
+            if key and key not in os.environ:
+                os.environ[key] = value
+
+
 def main():
+    _load_env_file()
     parser = argparse.ArgumentParser(
         description="Design Library Indexer — index web design files for AI-powered RAG",
         formatter_class=argparse.RawDescriptionHelpFormatter,

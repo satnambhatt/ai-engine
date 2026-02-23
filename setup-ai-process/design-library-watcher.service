@@ -6,21 +6,21 @@ Wants=ollama.service
 
 [Service]
 Type=simple
-User=rpi
-Group=rpi
-WorkingDirectory=/home/rpi/ai-engine/design-library-indexer
+User=AI_ENGINE_USER
+Group=AI_ENGINE_USER
+WorkingDirectory=%h/ai-engine/design-library-indexer
 Environment="CHROMA_TELEMETRY=FALSE"
 Environment="ANONYMIZED_TELEMETRY=FALSE"
 Environment="LIBRARY_ROOT=/mnt/design-library"
 Environment="CHROMA_DIR=/mnt/design-library/chroma_data"
-EnvironmentFile=-/home/rpi/ai-engine/.env
-ExecStart=/home/rpi/ai-engine/venv/bin/python watch_library.py \
+EnvironmentFile=-%h/ai-engine/.env
+ExecStart=%h/ai-engine/venv/bin/python watch_library.py \
     --library-root ${LIBRARY_ROOT} \
     --debounce 30
 Restart=on-failure
 RestartSec=10
-StandardOutput=append:/home/rpi/ai-engine/logs/watcher.log
-StandardError=append:/home/rpi/ai-engine/logs/watcher-error.log
+StandardOutput=append:%h/ai-engine/logs/watcher.log
+StandardError=append:%h/ai-engine/logs/watcher-error.log
 
 # Resource limits to avoid starving the Pi
 MemoryMax=512M
@@ -30,7 +30,7 @@ CPUQuota=50%
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=-/mnt/design-library/.index -/mnt/design-library/chroma_data -/home/rpi/ai-engine/design-library/.index -/home/rpi/ai-engine/chroma_data /home/rpi/ai-engine/logs
+ReadWritePaths=-/mnt/design-library/.index -/mnt/design-library/chroma_data -%h/ai-engine/design-library/.index -%h/ai-engine/chroma_data %h/ai-engine/logs
 
 [Install]
 WantedBy=multi-user.target

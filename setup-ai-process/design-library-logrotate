@@ -1,9 +1,9 @@
-/home/rpi/ai-engine/logs/*.log {
+AI_ENGINE_DIR/logs/*.log {
     daily
     rotate 7
     compress
     delaycompress
     missingok
     notifempty
-    create 0644 rpi rpi
+    create 0644 AI_ENGINE_USER AI_ENGINE_USER
 }

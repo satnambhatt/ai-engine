@@ -7,7 +7,7 @@ from pathlib import Path
 from dataclasses import dataclass, field
 
 _EXTERNAL_BASE = Path("/mnt/design-library")
-_LOCAL_BASE = Path("/home/rpi/ai-engine")
+_LOCAL_BASE = Path.home() / "ai-engine"
 
 
 def _use_external_drive() -> bool:
@@ -20,8 +20,8 @@ class IndexerConfig:
     """Central configuration for the design library indexer."""
 
     # ── Storage mode ───────────────────────────────────────────────────
-    # Set USE_EXTERNAL_DRIVE=false in /home/rpi/ai-engine/.env (or env)
-    # to store everything under /home/rpi/ai-engine/ instead.
+    # Set USE_EXTERNAL_DRIVE=false in ~/ai-engine/.env (or env)
+    # to store everything under ~/ai-engine/ instead.
     use_external_drive: bool = field(default_factory=_use_external_drive)
 
     # ── Paths — computed in __post_init__ based on use_external_drive ──

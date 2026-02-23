@@ -259,8 +259,13 @@ echo "[6/6] Installing systemd services..."
 SERVICE_DIR="${INDEXER_DIR}/setup-ai-process"
 
 if [ -f "${SERVICE_DIR}/design-library-watcher.service" ]; then
-    cp "${SERVICE_DIR}/design-library-watcher.service" /etc/systemd/system/
-    cp "${SERVICE_DIR}/design-library-reindex.service" /etc/systemd/system/
+    # Substitute AI_ENGINE_USER and AI_ENGINE_DIR placeholders with the actual user and path
+    sed -e "s|AI_ENGINE_USER|${ACTUAL_USER}|g" \
+        "${SERVICE_DIR}/design-library-watcher.service" \
+        > /etc/systemd/system/design-library-watcher.service
+    sed -e "s|AI_ENGINE_USER|${ACTUAL_USER}|g" \
+        "${SERVICE_DIR}/design-library-reindex.service" \
+        > /etc/systemd/system/design-library-reindex.service
     cp "${SERVICE_DIR}/design-library-reindex.timer" /etc/systemd/system/
 
     systemctl daemon-reload
@@ -280,7 +285,10 @@ fi
 
 # Install logrotate configuration
 if [ -f "${SERVICE_DIR}/design-library-logrotate" ]; then
-    cp "${SERVICE_DIR}/design-library-logrotate" /etc/logrotate.d/design-library
+    sed -e "s|AI_ENGINE_DIR|${ENGINE_DIR}|g" \
+        -e "s|AI_ENGINE_USER|${ACTUAL_USER}|g" \
+        "${SERVICE_DIR}/design-library-logrotate" \
+        > /etc/logrotate.d/design-library
     echo "  ✅ Logrotate configuration installed"
 fi
 

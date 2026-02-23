@@ -88,7 +88,7 @@ This system creates a **semantic search engine** for your web design library. It
 ### Directory Structure
 
 ```
-/home/rpi/
+$HOME/
 ├── ai-engine/
 │   ├── design-library-indexer/     # Main application
 │   │   ├── indexer/                # Python modules
@@ -135,7 +135,7 @@ This system creates a **semantic search engine** for your web design library. It
 
 ```bash
 # 1. Navigate to setup directory
-cd /home/rpi/setup-ai-files
+cd $HOME/setup-ai-files
 
 # 2. Make setup script executable
 chmod +x setup.sh
@@ -158,9 +158,9 @@ If you need to reinstall services:
 
 ```bash
 # Copy service files
-sudo cp /home/rpi/setup-ai-files/design-library-watcher.service /etc/systemd/system/
-sudo cp /home/rpi/setup-ai-files/design-library-reindex.service /etc/systemd/system/
-sudo cp /home/rpi/setup-ai-files/design-library-reindex.timer /etc/systemd/system/
+sudo cp $HOME/setup-ai-files/design-library-watcher.service /etc/systemd/system/
+sudo cp $HOME/setup-ai-files/design-library-reindex.service /etc/systemd/system/
+sudo cp $HOME/setup-ai-files/design-library-reindex.timer /etc/systemd/system/
 
 # Reload systemd
 sudo systemctl daemon-reload
@@ -180,14 +180,14 @@ sudo systemctl start design-library-reindex.timer
 
 ### Primary Config File
 
-**Location:** `/home/rpi/ai-engine/design-library-indexer/indexer/config.py`
+**Location:** `$HOME/ai-engine/design-library-indexer/indexer/config.py`
 
 ### Key Settings
 
 ```python
 # Paths
 library_root = "/mnt/design-library"
-chroma_persist_dir = "/home/rpi/ai-engine/chroma_data"
+chroma_persist_dir = "$HOME/ai-engine/chroma_data"
 index_metadata_dir = "/mnt/design-library/.index"
 
 # Ollama Settings
@@ -227,13 +227,13 @@ index_paths = [
 pkill -f "run_indexer.py"
 
 # Re-run with new settings
-cd /home/rpi/ai-engine/design-library-indexer
-nohup /home/rpi/ai-engine/venv/bin/python run_indexer.py index --full -v \
-  > /home/rpi/ai-engine/logs/full-index-$(date +%Y%m%d-%H%M%S).log 2>&1 &
+cd $HOME/ai-engine/design-library-indexer
+nohup $HOME/ai-engine/venv/bin/python run_indexer.py index --full -v \
+  > $HOME/ai-engine/logs/full-index-$(date +%Y%m%d-%H%M%S).log 2>&1 &
 
 # Resume later (automatically picks up where it left off)
-nohup /home/rpi/ai-engine/venv/bin/python run_indexer.py index -v \
-  > /home/rpi/ai-engine/logs/index-resume-$(date +%Y%m%d-%H%M%S).log 2>&1 &
+nohup $HOME/ai-engine/venv/bin/python run_indexer.py index -v \
+  > $HOME/ai-engine/logs/index-resume-$(date +%Y%m%d-%H%M%S).log 2>&1 &
 ```
 
 ---
@@ -291,23 +291,23 @@ echo "✅ Services enabled and started"
 
 ```bash
 # Navigate to indexer directory
-cd /home/rpi/ai-engine/design-library-indexer
+cd $HOME/ai-engine/design-library-indexer
 
 # Full index (re-processes everything)
-/home/rpi/ai-engine/venv/bin/python run_indexer.py index --full -v
+$HOME/ai-engine/venv/bin/python run_indexer.py index --full -v
 
 # Incremental index (only changed files)
-/home/rpi/ai-engine/venv/bin/python run_indexer.py index -v
+$HOME/ai-engine/venv/bin/python run_indexer.py index -v
 
 # Search test
-/home/rpi/ai-engine/venv/bin/python run_indexer.py search "hero section with gradient"
+$HOME/ai-engine/venv/bin/python run_indexer.py search "hero section with gradient"
 
 # View statistics
-/home/rpi/ai-engine/venv/bin/python run_indexer.py stats
+$HOME/ai-engine/venv/bin/python run_indexer.py stats
 
 # Background indexing with nohup
-nohup /home/rpi/ai-engine/venv/bin/python run_indexer.py index --full -v \
-  > /home/rpi/ai-engine/logs/full-index-$(date +%Y%m%d-%H%M%S).log 2>&1 &
+nohup $HOME/ai-engine/venv/bin/python run_indexer.py index --full -v \
+  > $HOME/ai-engine/logs/full-index-$(date +%Y%m%d-%H%M%S).log 2>&1 &
 
 # Check background process
 ps aux | grep "run_indexer.py" | grep -v grep
@@ -324,25 +324,25 @@ pkill -f "run_indexer.py"
 
 | Log File | Purpose | Location |
 |----------|---------|----------|
-| `indexer-manual.log` | Manual commands (search, stats, etc.) | `/home/rpi/ai-engine/logs/` |
-| `watcher.log` | Real-time file monitoring output | `/home/rpi/ai-engine/logs/` |
-| `watcher-error.log` | File watcher errors | `/home/rpi/ai-engine/logs/` |
-| `reindex.log` | Nightly scheduled re-index | `/home/rpi/ai-engine/logs/` |
-| `reindex-error.log` | Nightly re-index errors | `/home/rpi/ai-engine/logs/` |
+| `indexer-manual.log` | Manual commands (search, stats, etc.) | `$HOME/ai-engine/logs/` |
+| `watcher.log` | Real-time file monitoring output | `$HOME/ai-engine/logs/` |
+| `watcher-error.log` | File watcher errors | `$HOME/ai-engine/logs/` |
+| `reindex.log` | Nightly scheduled re-index | `$HOME/ai-engine/logs/` |
+| `reindex-error.log` | Nightly re-index errors | `$HOME/ai-engine/logs/` |
 
 ### Viewing Logs
 
 ```bash
 # Watch live logs
-tail -f /home/rpi/ai-engine/logs/watcher.log
-tail -f /home/rpi/ai-engine/logs/indexer-manual.log
+tail -f $HOME/ai-engine/logs/watcher.log
+tail -f $HOME/ai-engine/logs/indexer-manual.log
 
 # View recent errors
-tail -50 /home/rpi/ai-engine/logs/watcher-error.log
-tail -50 /home/rpi/ai-engine/logs/reindex-error.log
+tail -50 $HOME/ai-engine/logs/watcher-error.log
+tail -50 $HOME/ai-engine/logs/reindex-error.log
 
 # Search for errors
-grep -i error /home/rpi/ai-engine/logs/*.log
+grep -i error $HOME/ai-engine/logs/*.log
 
 # View systemd logs
 journalctl -u design-library-watcher -f
@@ -371,10 +371,10 @@ ollama list
 
 # Check disk usage
 df -h /mnt/design-library
-du -sh /home/rpi/ai-engine/chroma_data
+du -sh $HOME/ai-engine/chroma_data
 
 # Check indexing progress
-tail -f /home/rpi/ai-engine/logs/indexer-manual.log | grep "INFO"
+tail -f $HOME/ai-engine/logs/indexer-manual.log | grep "INFO"
 
 # CPU/Memory usage
 top -p $(pgrep -f "run_indexer.py")
@@ -443,7 +443,7 @@ ollama_base_url = "http://192.168.x.x:11434"  # Desktop IP
 desktop$ python run_indexer.py index --full
 
 # 2. Sync to Pi
-desktop$ rsync -avz chroma_data/ rpi@192.168.1.11:/home/rpi/ai-engine/chroma_data/
+desktop$ rsync -avz chroma_data/ <user>@192.168.1.11:~/ai-engine/chroma_data/
 
 # 3. Pi: Incremental updates only
 pi$ systemctl start design-library-watcher
@@ -453,13 +453,13 @@ pi$ systemctl start design-library-watcher
 
 ```bash
 # Test token calculation
-python3 /home/rpi/ai-engine/test_token_ratio.py /mnt/design-library/example-websites/html-css/sample.html
+python3 $HOME/ai-engine/test_token_ratio.py /mnt/design-library/example-websites/html-css/sample.html
 
 # Monitor embedding speed
-tail -f /home/rpi/ai-engine/logs/indexer-manual.log | grep "duration_ms"
+tail -f $HOME/ai-engine/logs/indexer-manual.log | grep "duration_ms"
 
 # Check ChromaDB size
-du -sh /home/rpi/ai-engine/chroma_data
+du -sh $HOME/ai-engine/chroma_data
 ```
 
 ---
@@ -509,11 +509,11 @@ Watch the auto-tuning decisions in real-time:
 
 ```bash
 # Terminal 1: Start indexing
-cd /home/rpi/ai-engine/design-library-indexer
-/home/rpi/ai-engine/venv/bin/python run_indexer.py index --full -v
+cd $HOME/ai-engine/design-library-indexer
+$HOME/ai-engine/venv/bin/python run_indexer.py index --full -v
 
 # Terminal 2: Watch auto-tune decisions
-tail -f /home/rpi/ai-engine/logs/indexer-manual.log | grep "Auto-tune"
+tail -f $HOME/ai-engine/logs/indexer-manual.log | grep "Auto-tune"
 ```
 
 **Example log output:**
@@ -566,19 +566,19 @@ workers = choose_worker_count(
 
 ### Comprehensive Documentation
 
-For in-depth information, see the full documentation in `/home/rpi/docs/`:
+For in-depth information, see the full documentation in `$HOME/docs/`:
 
-- **[ADAPTIVE_WORKERS.md](/home/rpi/docs/ADAPTIVE_WORKERS.md)** - Complete user guide (24KB)
+- **[ADAPTIVE_WORKERS.md]($HOME/docs/ADAPTIVE_WORKERS.md)** - Complete user guide (24KB)
   - Detailed usage instructions
   - Monitoring and troubleshooting
   - Performance tuning strategies
 
-- **[DESIGN_DECISIONS.md](/home/rpi/docs/DESIGN_DECISIONS.md)** - Architecture guide (16KB)
+- **[DESIGN_DECISIONS.md]($HOME/docs/DESIGN_DECISIONS.md)** - Architecture guide (16KB)
   - Why ThreadPoolExecutor vs ProcessPoolExecutor
   - Why simple rules vs machine learning
   - Safety guarantees and trade-offs
 
-- **[IMPLEMENTATION_SUMMARY.md](/home/rpi/docs/IMPLEMENTATION_SUMMARY.md)** - Quick reference (8KB)
+- **[IMPLEMENTATION_SUMMARY.md]($HOME/docs/IMPLEMENTATION_SUMMARY.md)** - Quick reference (8KB)
   - Configuration options
   - Expected performance metrics
   - Verification tests
@@ -588,8 +588,8 @@ For in-depth information, see the full documentation in `/home/rpi/docs/`:
 Verify auto-tuning is working correctly:
 
 ```bash
-cd /home/rpi/ai-engine/design-library-indexer
-/home/rpi/ai-engine/venv/bin/python << 'EOF'
+cd $HOME/ai-engine/design-library-indexer
+$HOME/ai-engine/venv/bin/python << 'EOF'
 from indexer.autotune import choose_worker_count, get_system_metrics
 
 metrics = get_system_metrics()
@@ -626,13 +626,13 @@ EOF
 sudo apt-get install cryptsetup
 
 # Create encrypted container
-sudo dd if=/dev/zero of=/home/rpi/encrypted-ai-engine.img bs=1M count=1024
-sudo cryptsetup luksFormat /home/rpi/encrypted-ai-engine.img
+sudo dd if=/dev/zero of=$HOME/encrypted-ai-engine.img bs=1M count=1024
+sudo cryptsetup luksFormat $HOME/encrypted-ai-engine.img
 
 # Open and mount
-sudo cryptsetup open /home/rpi/encrypted-ai-engine.img ai-engine-crypt
+sudo cryptsetup open $HOME/encrypted-ai-engine.img ai-engine-crypt
 sudo mkfs.ext4 /dev/mapper/ai-engine-crypt
-sudo mount /dev/mapper/ai-engine-crypt /home/rpi/ai-engine
+sudo mount /dev/mapper/ai-engine-crypt $HOME/ai-engine
 ```
 
 #### Option 2: Remote Ollama with SSH Tunnel
@@ -653,7 +653,7 @@ The systemd services are configured with security hardening:
 NoNewPrivileges=true           # Prevent privilege escalation
 ProtectSystem=strict           # Read-only system directories
 ProtectHome=read-only          # Read-only home directories
-ReadWritePaths=/mnt/design-library/.index /home/rpi/ai-engine/chroma_data /home/rpi/ai-engine/logs
+ReadWritePaths=/mnt/design-library/.index $HOME/ai-engine/chroma_data $HOME/ai-engine/logs
 
 # Resource limits
 MemoryMax=512M                 # Watcher: 512MB max
@@ -724,7 +724,7 @@ chunk_target_chars = 1000-3000  # Your choice
 
 ```bash
 # Analyze real files
-python3 /home/rpi/ai-engine/test_token_ratio.py /mnt/design-library/example-websites/html-css/sample.html
+python3 $HOME/ai-engine/test_token_ratio.py /mnt/design-library/example-websites/html-css/sample.html
 
 # Output shows:
 # - Character count
@@ -741,11 +741,11 @@ python3 /home/rpi/ai-engine/test_token_ratio.py /mnt/design-library/example-webs
 
 #### 1. **Permission Denied Errors**
 ```bash
-# Symptom: [Errno 13] Permission denied: '/home/rpi/ai-engine/venv'
+# Symptom: [Errno 13] Permission denied: '$HOME/ai-engine/venv'
 
 # Solution: Fix ownership
-sudo chown -R rpi:rpi /home/rpi/ai-engine
-sudo chown -R rpi:rpi /mnt/design-library
+sudo chown -R $USER:$USER $HOME/ai-engine
+sudo chown -R $USER:$USER /mnt/design-library
 ```
 
 #### 2. **Embedding Timeout Errors**
@@ -753,7 +753,7 @@ sudo chown -R rpi:rpi /mnt/design-library
 # Symptom: WARNING │ indexer.embeddings │ Embedding request timed out
 
 # Solution 1: Timeout already increased to 600 seconds (10 min)
-# Check: /home/rpi/ai-engine/design-library-indexer/indexer/embeddings.py line 98
+# Check: $HOME/ai-engine/design-library-indexer/indexer/embeddings.py line 98
 
 # Solution 2: Use remote Ollama with GPU (see Performance section)
 ```
@@ -766,12 +766,12 @@ sudo chown -R rpi:rpi /mnt/design-library
 # Files are now copied correctly from flat structure
 ```
 
-#### 4. **Wrong User (pi vs rpi)**
+#### 4. **Wrong User**
 ```bash
-# Symptom: References to /home/pi instead of /home/rpi
+# Symptom: References to a hardcoded user home (e.g. /home/pi) instead of $HOME
 
-# Solution: Already fixed in all config files
-# Check config.py line 16: chroma_persist_dir = "/home/rpi/ai-engine/chroma_data"
+# Solution: All config files now use $HOME / Path.home() dynamically.
+# Check config.py: _LOCAL_BASE = Path.home() / "ai-engine"
 ```
 
 #### 5. **Service Won't Start**
@@ -805,7 +805,7 @@ ollama list
 #### 7. **Slow Indexing**
 ```bash
 # Check current speed
-tail -f /home/rpi/ai-engine/logs/indexer-manual.log
+tail -f $HOME/ai-engine/logs/indexer-manual.log
 
 # Solutions:
 # 1. Let it finish (first index is always slow)
@@ -838,10 +838,10 @@ pkill -f "run_indexer.py"
 # Impact: System still works, but can't tune based on RAM (only CPU load + temp)
 
 # Fix (optional):
-/home/rpi/ai-engine/venv/bin/pip install psutil>=5.9.0
+$HOME/ai-engine/venv/bin/pip install psutil>=5.9.0
 
 # Verify installation:
-/home/rpi/ai-engine/venv/bin/python -c "import psutil; print('✅ psutil installed')"
+$HOME/ai-engine/venv/bin/python -c "import psutil; print('✅ psutil installed')"
 ```
 
 ---
@@ -935,19 +935,19 @@ sudo systemctl enable design-library-watcher
 sudo systemctl disable design-library-watcher
 
 # ── VIEW LOGS ──
-tail -f /home/rpi/ai-engine/logs/watcher.log
+tail -f $HOME/ai-engine/logs/watcher.log
 journalctl -u design-library-watcher -f
 
 # ── MANUAL INDEXING ──
-cd /home/rpi/ai-engine/design-library-indexer
-/home/rpi/ai-engine/venv/bin/python run_indexer.py index --full -v
+cd $HOME/ai-engine/design-library-indexer
+$HOME/ai-engine/venv/bin/python run_indexer.py index --full -v
 
 # ── SEARCH ──
-/home/rpi/ai-engine/venv/bin/python run_indexer.py search "your query here"
+$HOME/ai-engine/venv/bin/python run_indexer.py search "your query here"
 
 # ── BACKGROUND INDEXING ──
-nohup /home/rpi/ai-engine/venv/bin/python run_indexer.py index --full -v \
-  > /home/rpi/ai-engine/logs/full-index-$(date +%Y%m%d-%H%M%S).log 2>&1 &
+nohup $HOME/ai-engine/venv/bin/python run_indexer.py index --full -v \
+  > $HOME/ai-engine/logs/full-index-$(date +%Y%m%d-%H%M%S).log 2>&1 &
 
 # ── CHECK STATUS ──
 systemctl status design-library-watcher
@@ -958,12 +958,12 @@ ollama list
 ### Important Paths
 
 ```
-Config:       /home/rpi/ai-engine/design-library-indexer/indexer/config.py
-Logs:         /home/rpi/ai-engine/logs/
-Database:     /home/rpi/ai-engine/chroma_data/
+Config:       $HOME/ai-engine/design-library-indexer/indexer/config.py
+Logs:         $HOME/ai-engine/logs/
+Database:     $HOME/ai-engine/chroma_data/
 Library:      /mnt/design-library/
 Services:     /etc/systemd/system/design-library-*
-Setup:        /home/rpi/setup-ai-files/
+Setup:        $HOME/setup-ai-files/
 ```
 
 ### Performance Metrics
@@ -988,9 +988,9 @@ Further Optimization:
 
 ### Documentation Locations
 
-- **This README:** `/home/rpi/docs/README.md`
-- **Storage Layout:** `/home/rpi/setup-ai-files/STORAGE_LAYOUT.md`
-- **Setup Script:** `/home/rpi/setup-ai-files/setup.sh`
+- **This README:** `$HOME/docs/README.md`
+- **Storage Layout:** `$HOME/setup-ai-files/STORAGE_LAYOUT.md`
+- **Setup Script:** `$HOME/setup-ai-files/setup.sh`
 
 ### External Resources
 
@@ -1000,7 +1000,7 @@ Further Optimization:
 
 ### Getting Help
 
-1. Check logs: `tail -f /home/rpi/ai-engine/logs/*.log`
+1. Check logs: `tail -f $HOME/ai-engine/logs/*.log`
 2. Check service status: `systemctl status design-library-watcher`
 3. Review this README troubleshooting section
 4. Check Ollama status: `ollama list` and `ps aux | grep ollama`

@@ -1,8 +1,9 @@
 #!/bin/bash
 # Search and display full file content for the top result
-cd /home/rpi/ai-engine/design-library-indexer
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${SCRIPT_DIR}/design-library-indexer"
 
-RESULT=$(/home/rpi/ai-engine/venv/bin/python -c "
+RESULT=$("${SCRIPT_DIR}/venv/bin/python" -c "
 import sys, logging
 logging.disable(logging.CRITICAL)
 from indexer.config import IndexerConfig

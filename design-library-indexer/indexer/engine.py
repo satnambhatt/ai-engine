@@ -16,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .autotune import choose_worker_count, get_cpu_temp
+from .autotune import choose_worker_count, get_cpu_temp, get_system_metrics
 from .chunker import Chunker
 from .config import IndexerConfig
 from .discovery import FileDiscovery, DiscoveredFile
@@ -110,7 +110,7 @@ class IndexerEngine:
             # Log progress
             processed = self._stats["files_processed"]
             if total_files > 0 and processed % self.config.log_every_n_files == 0:
-                self._log_progress(processed, total_files, progress_start)
+                self._log_progress(processed, total_files, progress_start, workers)
 
             # Re-evaluate workers periodically for thermal protection (not every file)
             if processed > 0 and processed % autotune_interval == 0:
@@ -352,8 +352,8 @@ class IndexerEngine:
         with open(log_file, "a") as f:
             f.write(json.dumps(self._stats) + "\n")
 
-    def _log_progress(self, processed: int, total: int, start_time: float) -> None:
-        """Log indexing progress with percentage, counts, and ETA."""
+    def _log_progress(self, processed: int, total: int, start_time: float, workers: int) -> None:
+        """Log indexing progress with percentage, counts, ETA, and system metrics."""
         pct = (processed / total) * 100
         remaining = total - processed
         elapsed = time.monotonic() - start_time
@@ -361,7 +361,6 @@ class IndexerEngine:
         if processed > 0 and elapsed > 0:
             rate = processed / elapsed  # files per second
             eta_seconds = remaining / rate
-            # Format ETA as human-readable
             if eta_seconds < 60:
                 eta_str = f"{eta_seconds:.0f}s"
             elif eta_seconds < 3600:
@@ -373,9 +372,20 @@ class IndexerEngine:
         else:
             eta_str = "calculating..."
 
+        metrics = get_system_metrics()
+        load = metrics.get("load_avg")
+        cores = metrics.get("cpu_cores", 1)
+        ram = metrics.get("free_ram_gb")
+        temp = metrics.get("temp_c")
+
+        load_str = f"{load:.2f}/{cores}" if load is not None else "n/a"
+        ram_str = f"{ram:.2f}GB free" if ram is not None else "n/a"
+        temp_str = f"{temp:.0f}°C" if temp is not None else "n/a"
+
         logger.info(
             f"Progress: {processed}/{total} files ({pct:.1f}%) │ "
-            f"{remaining} remaining │ ETA: {eta_str}"
+            f"{remaining} remaining │ ETA: {eta_str} │ "
+            f"workers: {workers} │ load: {load_str} │ RAM: {ram_str} │ temp: {temp_str}"
         )
 
     def _log_summary(self) -> None:

@@ -131,13 +131,13 @@ workers = max(min_workers, min(workers, max_workers))
 No changes needed! The auto-tuner runs automatically:
 
 ```bash
-cd /home/rpi/ai-engine/design-library-indexer
+cd $HOME/ai-engine/design-library-indexer
 
 # Full index with auto-tuning
-/home/rpi/ai-engine/venv/bin/python run_indexer.py index --full -v
+$HOME/ai-engine/venv/bin/python run_indexer.py index --full -v
 
 # Incremental index with auto-tuning
-/home/rpi/ai-engine/venv/bin/python run_indexer.py index -v
+$HOME/ai-engine/venv/bin/python run_indexer.py index -v
 ```
 
 ### Monitor Auto-Tuning Decisions
@@ -145,7 +145,7 @@ cd /home/rpi/ai-engine/design-library-indexer
 Watch the logs to see worker adjustments:
 
 ```bash
-tail -f /home/rpi/ai-engine/logs/indexer-manual.log | grep "Auto-tune"
+tail -f $HOME/ai-engine/logs/indexer-manual.log | grep "Auto-tune"
 ```
 
 **Example output:**
@@ -177,7 +177,7 @@ print(metrics)
 **Press `Ctrl+C`** during indexing:
 
 ```bash
-/home/rpi/ai-engine/venv/bin/python run_indexer.py index --full -v
+$HOME/ai-engine/venv/bin/python run_indexer.py index --full -v
 # ... indexing in progress ...
 ^C  # Press Ctrl+C
 
@@ -207,7 +207,7 @@ The indexer **automatically resumes** thanks to SHA256 hash tracking:
 
 ```bash
 # Simply re-run (incremental mode)
-/home/rpi/ai-engine/venv/bin/python run_indexer.py index -v
+$HOME/ai-engine/venv/bin/python run_indexer.py index -v
 ```
 
 **How it works:**
@@ -245,7 +245,7 @@ EOF
 rm /mnt/design-library/.index/file_hashes.json
 
 # Then run incremental (will detect all files as "new")
-/home/rpi/ai-engine/venv/bin/python run_indexer.py index -v
+$HOME/ai-engine/venv/bin/python run_indexer.py index -v
 ```
 
 ---
@@ -296,7 +296,7 @@ Expected: **50-70% faster** (but monitor temps!)
 ### Test Auto-Tuner Directly
 
 ```bash
-cd /home/rpi/ai-engine/design-library-indexer
+cd $HOME/ai-engine/design-library-indexer
 
 python3 << 'EOF'
 from indexer.autotune import choose_worker_count, get_system_metrics
@@ -331,8 +331,8 @@ python3 -c "from indexer.autotune import choose_worker_count; print(choose_worke
 
 ```bash
 # Terminal 1: Start indexing
-cd /home/rpi/ai-engine/design-library-indexer
-/home/rpi/ai-engine/venv/bin/python run_indexer.py index --full -v
+cd $HOME/ai-engine/design-library-indexer
+$HOME/ai-engine/venv/bin/python run_indexer.py index --full -v
 
 # Terminal 2: Watch metrics
 watch -n 2 'echo "=== CPU Load ===" && uptime && \
@@ -372,7 +372,7 @@ WARNING: psutil not available - RAM-based tuning disabled
 
 **Solution:**
 ```bash
-/home/rpi/ai-engine/venv/bin/pip install psutil>=5.9.0
+$HOME/ai-engine/venv/bin/pip install psutil>=5.9.0
 ```
 
 ### Issue: Temperature Always N/A
@@ -390,7 +390,7 @@ WARNING: psutil not available - RAM-based tuning disabled
 If it does:
 ```bash
 # Check logs
-tail -50 /home/rpi/ai-engine/logs/indexer-manual.log
+tail -50 $HOME/ai-engine/logs/indexer-manual.log
 
 # Report the error with full traceback
 ```
@@ -419,7 +419,7 @@ workers = 2  # Fixed worker count
 
 ### Custom Tuning Rules
 
-Edit `/home/rpi/ai-engine/design-library-indexer/indexer/autotune.py`:
+Edit `$HOME/ai-engine/design-library-indexer/indexer/autotune.py`:
 
 ```python
 # Example: More aggressive tuning
@@ -435,7 +435,7 @@ def choose_worker_count(...):
 
 ```python
 # In autotune.py, add:
-with open("/home/rpi/ai-engine/logs/autotune.log", "a") as f:
+with open("$HOME/ai-engine/logs/autotune.log", "a") as f:
     f.write(f"{datetime.now()} workers={workers} load={load_avg} temp={temp_c} ram={free_ram_gb}\n")
 ```
 
@@ -450,7 +450,7 @@ Monitor every 30 minutes:
 ```bash
 # Quick health check
 watch -n 30 '
-  echo "Workers:" && tail -1 /home/rpi/ai-engine/logs/indexer-manual.log | grep "Auto-tune"
+  echo "Workers:" && tail -1 $HOME/ai-engine/logs/indexer-manual.log | grep "Auto-tune"
   echo "Temp:" && vcgencmd measure_temp
   echo "Load:" && uptime
   echo "RAM:" && free -h | grep Mem
@@ -494,10 +494,10 @@ watch -n 30 '
 
 ### Implementation Files
 
-- **Auto-tuner:** `/home/rpi/ai-engine/design-library-indexer/indexer/autotune.py`
-- **Engine:** `/home/rpi/ai-engine/design-library-indexer/indexer/engine.py`
-- **Config:** `/home/rpi/ai-engine/design-library-indexer/indexer/config.py`
-- **Requirements:** `/home/rpi/ai-engine/design-library-indexer/requirements.txt`
+- **Auto-tuner:** `$HOME/ai-engine/design-library-indexer/indexer/autotune.py`
+- **Engine:** `$HOME/ai-engine/design-library-indexer/indexer/engine.py`
+- **Config:** `$HOME/ai-engine/design-library-indexer/indexer/config.py`
+- **Requirements:** `$HOME/ai-engine/design-library-indexer/requirements.txt`
 
 ### Dependencies
 
@@ -506,8 +506,8 @@ watch -n 30 '
 
 ### Related Documentation
 
-- **Main README:** `/home/rpi/docs/README.md`
-- **Storage Layout:** `/home/rpi/setup-ai-files/STORAGE_LAYOUT.md`
+- **Main README:** `$HOME/docs/README.md`
+- **Storage Layout:** `$HOME/setup-ai-files/STORAGE_LAYOUT.md`
 
 ---
 

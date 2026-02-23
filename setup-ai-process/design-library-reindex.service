@@ -5,19 +5,19 @@ Wants=ollama.service
 
 [Service]
 Type=oneshot
-User=rpi
-Group=rpi
-WorkingDirectory=/home/rpi/ai-engine/design-library-indexer
+User=AI_ENGINE_USER
+Group=AI_ENGINE_USER
+WorkingDirectory=%h/ai-engine/design-library-indexer
 Environment="CHROMA_TELEMETRY=FALSE"
 Environment="ANONYMIZED_TELEMETRY=FALSE"
 Environment="LIBRARY_ROOT=/mnt/design-library"
 Environment="CHROMA_DIR=/mnt/design-library/chroma_data"
-EnvironmentFile=-/home/rpi/ai-engine/.env
-ExecStart=/home/rpi/ai-engine/venv/bin/python run_indexer.py index --full \
+EnvironmentFile=-%h/ai-engine/.env
+ExecStart=%h/ai-engine/venv/bin/python run_indexer.py index --full \
     --library-root ${LIBRARY_ROOT} \
     --chroma-dir ${CHROMA_DIR}
-StandardOutput=append:/home/rpi/ai-engine/logs/reindex.log
-StandardError=append:/home/rpi/ai-engine/logs/reindex-error.log
+StandardOutput=append:%h/ai-engine/logs/reindex.log
+StandardError=append:%h/ai-engine/logs/reindex-error.log
 
 # Generous timeout — full index can take hours on Pi
 TimeoutStartSec=28800
@@ -26,4 +26,4 @@ MemoryMax=1G
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=-/mnt/design-library/.index -/mnt/design-library/chroma_data -/home/rpi/ai-engine/design-library/.index -/home/rpi/ai-engine/chroma_data /home/rpi/ai-engine/logs
+ReadWritePaths=-/mnt/design-library/.index -/mnt/design-library/chroma_data -%h/ai-engine/design-library/.index -%h/ai-engine/chroma_data %h/ai-engine/logs

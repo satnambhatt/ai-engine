@@ -6,15 +6,15 @@ Exposes search, code generation, templates, SEO audit, and health check
 as MCP tools that Claude Code / VS Code can call directly from the IDE.
 
 Usage:
-    /home/rpi/ai-engine/venv/bin/python /home/rpi/ai-engine/mcp-server/server.py
+    ~/ai-engine/venv/bin/python ~/ai-engine/mcp-server/server.py
 
 Configure in ~/.claude.json:
     {
       "mcpServers": {
         "design-rag": {
           "type": "stdio",
-          "command": "/home/rpi/ai-engine/venv/bin/python",
-          "args": ["/home/rpi/ai-engine/mcp-server/server.py"]
+          "command": "/home/<your-user>/ai-engine/venv/bin/python",
+          "args": ["/home/<your-user>/ai-engine/mcp-server/server.py"]
         }
       }
     }

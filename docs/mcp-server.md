@@ -26,15 +26,15 @@ The MCP server runs as a subprocess spawned by your IDE. It communicates over st
 Dependencies are already installed in the shared venv:
 
 ```bash
-/home/rpi/ai-engine/venv/bin/pip install "mcp[cli]" httpx
+$HOME/ai-engine/venv/bin/pip install "mcp[cli]" httpx
 ```
 
 ### 2. Ensure the RAG API is running
 
 ```bash
-cd /home/rpi/ai-engine/rag-api
-nohup /home/rpi/ai-engine/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 \
-  > /home/rpi/ai-engine/logs/rag-api.log 2>&1 &
+cd $HOME/ai-engine/rag-api
+nohup $HOME/ai-engine/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 \
+  > $HOME/ai-engine/logs/rag-api.log 2>&1 &
 ```
 
 ### 3. Configure your IDE
@@ -48,17 +48,17 @@ Add to `~/.claude.json`:
   "mcpServers": {
     "design-rag": {
       "type": "stdio",
-      "command": "/home/rpi/ai-engine/venv/bin/python",
-      "args": ["/home/rpi/ai-engine/mcp-server/server.py"]
+      "command": "/home/<your-user>/ai-engine/venv/bin/python",
+      "args": ["/home/<your-user>/ai-engine/mcp-server/server.py"]
     }
   }
 }
 ```
 
-Or use the CLI:
+Replace `<your-user>` with your actual username (`echo $USER`). Or use the CLI (which does expand `$HOME`):
 
 ```bash
-claude mcp add design-rag -- /home/rpi/ai-engine/venv/bin/python /home/rpi/ai-engine/mcp-server/server.py
+claude mcp add design-rag -- $HOME/ai-engine/venv/bin/python $HOME/ai-engine/mcp-server/server.py
 ```
 
 Then restart Claude Code. Verify with:
@@ -76,12 +76,14 @@ Create `.vscode/mcp.json` in your workspace:
   "servers": {
     "design-rag": {
       "type": "stdio",
-      "command": "/home/rpi/ai-engine/venv/bin/python",
-      "args": ["/home/rpi/ai-engine/mcp-server/server.py"]
+      "command": "/home/<your-user>/ai-engine/venv/bin/python",
+      "args": ["/home/<your-user>/ai-engine/mcp-server/server.py"]
     }
   }
 }
 ```
+
+Replace `<your-user>` with your actual username (`echo $USER`).
 
 Or use the command palette: `Ctrl+Shift+P` > "MCP: Add Server" > stdio.
 
@@ -157,7 +159,7 @@ Check the RAG system status.
 ## File Structure
 
 ```
-/home/rpi/ai-engine/mcp-server/
+$HOME/ai-engine/mcp-server/
 ├── server.py           # MCP server with 5 tools
 └── requirements.txt    # mcp[cli], httpx
 ```
@@ -167,20 +169,20 @@ Check the RAG system status.
 ### Interactive testing with MCP dev tools
 
 ```bash
-/home/rpi/ai-engine/venv/bin/python -m mcp dev /home/rpi/ai-engine/mcp-server/server.py
+$HOME/ai-engine/venv/bin/python -m mcp dev $HOME/ai-engine/mcp-server/server.py
 ```
 
 ### Manual protocol test
 
 ```bash
-printf '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}},"id":1}\n{"jsonrpc":"2.0","method":"notifications/initialized","params":{}}\n{"jsonrpc":"2.0","method":"tools/list","id":2}\n' | /home/rpi/ai-engine/venv/bin/python /home/rpi/ai-engine/mcp-server/server.py 2>/dev/null
+printf '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}},"id":1}\n{"jsonrpc":"2.0","method":"notifications/initialized","params":{}}\n{"jsonrpc":"2.0","method":"tools/list","id":2}\n' | $HOME/ai-engine/venv/bin/python $HOME/ai-engine/mcp-server/server.py 2>/dev/null
 ```
 
 ## Troubleshooting
 
 **Tools don't appear in IDE:**
 - Restart the IDE after adding the MCP config
-- Verify the Python path is correct: `/home/rpi/ai-engine/venv/bin/python`
+- Verify the Python path is correct: `$HOME/ai-engine/venv/bin/python`
 - Check the server starts: run `server.py` manually and look for errors on stderr
 
 **"Cannot connect to RAG API":**
@@ -194,7 +196,7 @@ printf '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024
 **Import errors:**
 - Ensure `mcp` and `httpx` are installed in the venv:
   ```bash
-  /home/rpi/ai-engine/venv/bin/pip install "mcp[cli]" httpx
+  $HOME/ai-engine/venv/bin/pip install "mcp[cli]" httpx
   ```
 
 ---

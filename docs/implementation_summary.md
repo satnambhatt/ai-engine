@@ -8,7 +8,7 @@
 ## 📦 Deliverables
 
 ### 1️⃣ **autotune.py** - Complete Implementation
-**Location:** `/home/rpi/ai-engine/design-library-indexer/indexer/autotune.py`
+**Location:** `$HOME/ai-engine/design-library-indexer/indexer/autotune.py`
 
 **Features:**
 - ✅ CPU load monitoring via `os.getloadavg()`
@@ -109,8 +109,8 @@ With cooling:         Up to 4 workers → 1.5-2 days (60-70% faster)
 ### 1. Verify Installation
 
 ```bash
-cd /home/rpi/ai-engine/design-library-indexer
-/home/rpi/ai-engine/venv/bin/python << 'EOF'
+cd $HOME/ai-engine/design-library-indexer
+$HOME/ai-engine/venv/bin/python << 'EOF'
 from indexer.autotune import choose_worker_count, get_system_metrics
 
 metrics = get_system_metrics()
@@ -136,25 +136,25 @@ EOF
 ### 2. Run Indexing (Auto-Tuning Enabled)
 
 ```bash
-cd /home/rpi/ai-engine/design-library-indexer
+cd $HOME/ai-engine/design-library-indexer
 
 # Full index with auto-tuning
-/home/rpi/ai-engine/venv/bin/python run_indexer.py index --full -v
+$HOME/ai-engine/venv/bin/python run_indexer.py index --full -v
 
 # Watch auto-tuning decisions
-tail -f /home/rpi/ai-engine/logs/indexer-manual.log | grep "Auto-tune"
+tail -f $HOME/ai-engine/logs/indexer-manual.log | grep "Auto-tune"
 ```
 
 ### 3. Monitor Performance
 
 ```bash
 # Terminal 1: Start indexing
-/home/rpi/ai-engine/venv/bin/python run_indexer.py index --full -v
+$HOME/ai-engine/venv/bin/python run_indexer.py index --full -v
 
 # Terminal 2: Watch metrics
 watch -n 5 '
   echo "=== Auto-Tune Log ==="
-  tail -5 /home/rpi/ai-engine/logs/indexer-manual.log | grep "Auto-tune"
+  tail -5 $HOME/ai-engine/logs/indexer-manual.log | grep "Auto-tune"
   echo ""
   echo "=== System Status ==="
   uptime
@@ -186,7 +186,7 @@ pkill -f "run_indexer.py"
 
 ```bash
 # Simply re-run in incremental mode
-/home/rpi/ai-engine/venv/bin/python run_indexer.py index -v
+$HOME/ai-engine/venv/bin/python run_indexer.py index -v
 ```
 
 **How it works:**
@@ -370,18 +370,18 @@ Temp: 55-60°C
 ## 📚 File Locations
 
 ### Implementation
-- **Auto-tuner:** `/home/rpi/ai-engine/design-library-indexer/indexer/autotune.py`
-- **Engine:** `/home/rpi/ai-engine/design-library-indexer/indexer/engine.py`
-- **Requirements:** `/home/rpi/ai-engine/design-library-indexer/requirements.txt`
+- **Auto-tuner:** `$HOME/ai-engine/design-library-indexer/indexer/autotune.py`
+- **Engine:** `$HOME/ai-engine/design-library-indexer/indexer/engine.py`
+- **Requirements:** `$HOME/ai-engine/design-library-indexer/requirements.txt`
 
 ### Source (Backup)
-- **Auto-tuner:** `/home/rpi/setup-ai-files/autotune.py`
-- **Requirements:** `/home/rpi/setup-ai-files/requirements.txt`
+- **Auto-tuner:** `$HOME/setup-ai-files/autotune.py`
+- **Requirements:** `$HOME/setup-ai-files/requirements.txt`
 
 ### Documentation
-- **User Guide:** `/home/rpi/docs/ADAPTIVE_WORKERS.md`
-- **Design Docs:** `/home/rpi/docs/DESIGN_DECISIONS.md`
-- **This Summary:** `/home/rpi/docs/IMPLEMENTATION_SUMMARY.md`
+- **User Guide:** `$HOME/docs/ADAPTIVE_WORKERS.md`
+- **Design Docs:** `$HOME/docs/DESIGN_DECISIONS.md`
+- **This Summary:** `$HOME/docs/IMPLEMENTATION_SUMMARY.md`
 
 ---
 

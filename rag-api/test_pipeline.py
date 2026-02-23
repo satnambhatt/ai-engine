@@ -6,8 +6,8 @@ Tests the full flow: Brief → RAG search → LLM generation → SEO audit
 Can run standalone (no server needed) or against the running API.
 
 Usage:
-    cd /home/rpi/ai-engine/rag-api
-    /home/rpi/ai-engine/venv/bin/python test_pipeline.py
+    cd ~/ai-engine/rag-api
+    ~/ai-engine/venv/bin/python test_pipeline.py
 """
 
 import json

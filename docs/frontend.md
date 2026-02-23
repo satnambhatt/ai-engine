@@ -26,8 +26,10 @@ sudo apt-get install -y nginx
 ### 2. Configure nginx
 
 ```bash
-# Copy the config
-sudo cp /home/rpi/ai-engine/setup-ai-process/nginx-ai-engine.conf /etc/nginx/sites-available/ai-engine
+# Substitute your home directory and install the config
+sed "s|AI_ENGINE_DIR|$HOME/ai-engine|g" \
+  $HOME/ai-engine/setup-ai-process/nginx-ai-engine.conf \
+  | sudo tee /etc/nginx/sites-available/ai-engine > /dev/null
 
 # Enable the site
 sudo ln -sf /etc/nginx/sites-available/ai-engine /etc/nginx/sites-enabled/ai-engine
@@ -42,9 +44,9 @@ sudo nginx -t && sudo systemctl reload nginx
 ### 3. Ensure the RAG API is running
 
 ```bash
-cd /home/rpi/ai-engine/rag-api
-nohup /home/rpi/ai-engine/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 \
-  > /home/rpi/ai-engine/logs/rag-api.log 2>&1 &
+cd $HOME/ai-engine/rag-api
+nohup $HOME/ai-engine/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 \
+  > $HOME/ai-engine/logs/rag-api.log 2>&1 &
 ```
 
 ### 4. Access the UI
@@ -92,7 +94,7 @@ hostname -I
 ## File Structure
 
 ```
-/home/rpi/ai-engine/frontend/
+$HOME/ai-engine/frontend/
 ├── index.html          # SPA shell with 4 tabs
 ├── css/
 │   └── style.css       # Dark theme styles
@@ -102,13 +104,13 @@ hostname -I
 
 ## nginx Config
 
-Located at `/home/rpi/ai-engine/setup-ai-process/nginx-ai-engine.conf`:
+Located at `$HOME/ai-engine/setup-ai-process/nginx-ai-engine.conf`:
 
 ```nginx
 server {
     listen 80;
     server_name _;
-    root /home/rpi/ai-engine/frontend;
+    root /home/<your-user>/ai-engine/frontend;  # AI_ENGINE_DIR is substituted at install
     index index.html;
 
     location / {

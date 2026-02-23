@@ -79,11 +79,13 @@ Four tabs:
 # Install nginx
 sudo apt-get install -y nginx
 
-# Configure
-sudo cp /home/rpi/ai-engine/setup-ai-process/nginx-ai-engine.conf /etc/nginx/sites-available/ai-engine
+# Configure (substitutes your home directory into the nginx config)
+sed "s|AI_ENGINE_DIR|$HOME/ai-engine|g" \
+  $HOME/ai-engine/setup-ai-process/nginx-ai-engine.conf \
+  | sudo tee /etc/nginx/sites-available/ai-engine > /dev/null
 sudo ln -sf /etc/nginx/sites-available/ai-engine /etc/nginx/sites-enabled/ai-engine
 sudo rm -f /etc/nginx/sites-enabled/default
-sudo chmod o+x /home/rpi
+sudo chmod o+x $HOME
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
@@ -129,9 +131,9 @@ Each response includes an updated `history` array — store it client-side and s
 ### Start the API
 
 ```bash
-cd /home/rpi/ai-engine/rag-api
-nohup /home/rpi/ai-engine/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 \
-  > /home/rpi/ai-engine/logs/rag-api.log 2>&1 &
+cd $HOME/ai-engine/rag-api
+nohup $HOME/ai-engine/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 \
+  > $HOME/ai-engine/logs/rag-api.log 2>&1 &
 ```
 
 See [docs/rag-api.md](docs/rag-api.md) for endpoint examples and request/response schemas.
@@ -151,7 +153,7 @@ Exposes 5 RAG tools to Claude Code and VS Code via the Model Context Protocol:
 ### Setup for Claude Code
 
 ```bash
-claude mcp add design-rag -- /home/rpi/ai-engine/venv/bin/python /home/rpi/ai-engine/mcp-server/server.py
+claude mcp add design-rag -- $HOME/ai-engine/venv/bin/python $HOME/ai-engine/mcp-server/server.py
 ```
 
 ### Setup for VS Code
@@ -163,12 +165,14 @@ Create `.vscode/mcp.json` in your workspace:
   "servers": {
     "design-rag": {
       "type": "stdio",
-      "command": "/home/rpi/ai-engine/venv/bin/python",
-      "args": ["/home/rpi/ai-engine/mcp-server/server.py"]
+      "command": "/home/<your-user>/ai-engine/venv/bin/python",
+      "args": ["/home/<your-user>/ai-engine/mcp-server/server.py"]
     }
   }
 }
 ```
+
+Replace `<your-user>` with your actual username (e.g. `echo $USER`).
 
 See [docs/mcp-server.md](docs/mcp-server.md) for full tool reference and troubleshooting.
 
@@ -177,7 +181,7 @@ See [docs/mcp-server.md](docs/mcp-server.md) for full tool reference and trouble
 ### 1. Setup (first time only)
 
 ```bash
-cd /home/rpi/ai-engine
+cd $HOME/ai-engine
 chmod +x setup.sh
 sudo ./setup.sh
 
@@ -185,11 +189,11 @@ sudo ./setup.sh
 sudo ENABLE_SERVICES=true ./setup.sh
 ```
 
-`setup.sh` will prompt whether you have an external USB drive and write `/home/rpi/ai-engine/.env` accordingly. All components read this file at startup.
+`setup.sh` will prompt whether you have an external USB drive and write `$HOME/ai-engine/.env` accordingly. All components read this file at startup.
 
 ### Storage Configuration
 
-Storage mode is controlled by `/home/rpi/ai-engine/.env`:
+Storage mode is controlled by `$HOME/ai-engine/.env`:
 
 ```bash
 # External USB drive (default)
@@ -199,14 +203,14 @@ CHROMA_DIR=/mnt/design-library/chroma_data
 
 # Local storage (no external drive)
 USE_EXTERNAL_DRIVE=false
-LIBRARY_ROOT=/home/rpi/ai-engine/design-library
-CHROMA_DIR=/home/rpi/ai-engine/chroma_data
+LIBRARY_ROOT=$HOME/ai-engine/design-library
+CHROMA_DIR=$HOME/ai-engine/chroma_data
 ```
 
 To switch storage mode, edit `.env` and restart all services. To migrate an existing ChromaDB to the external drive:
 
 ```bash
-mv /home/rpi/ai-engine/chroma_data /mnt/design-library/chroma_data
+mv $HOME/ai-engine/chroma_data /mnt/design-library/chroma_data
 sudo systemctl daemon-reload
 sudo systemctl restart design-library-watcher
 ```
@@ -214,25 +218,25 @@ sudo systemctl restart design-library-watcher
 ### 2. Index your library
 
 ```bash
-cd /home/rpi/ai-engine/design-library-indexer
+cd $HOME/ai-engine/design-library-indexer
 
 # Full index (first time)
-/home/rpi/ai-engine/venv/bin/python run_indexer.py index --full -v
+$HOME/ai-engine/venv/bin/python run_indexer.py index --full -v
 
 # Incremental index (after first time - only new/changed files)
-/home/rpi/ai-engine/venv/bin/python run_indexer.py index -v
+$HOME/ai-engine/venv/bin/python run_indexer.py index -v
 ```
 
 ### 3. Background indexing
 
 ```bash
 # Run in background with logging
-cd /home/rpi/ai-engine/design-library-indexer
-nohup /home/rpi/ai-engine/venv/bin/python run_indexer.py index --full -v \
-  > /home/rpi/ai-engine/logs/full-index-$(date +%Y%m%d-%H%M%S).log 2>&1 &
+cd $HOME/ai-engine/design-library-indexer
+nohup $HOME/ai-engine/venv/bin/python run_indexer.py index --full -v \
+  > $HOME/ai-engine/logs/full-index-$(date +%Y%m%d-%H%M%S).log 2>&1 &
 
 # Monitor progress
-tail -f /home/rpi/ai-engine/logs/indexer-manual.log
+tail -f $HOME/ai-engine/logs/indexer-manual.log
 ```
 
 ### 4. Stop and resume
@@ -242,24 +246,26 @@ tail -f /home/rpi/ai-engine/logs/indexer-manual.log
 pkill -f "run_indexer.py"
 
 # Resume later (automatically picks up where it left off)
-cd /home/rpi/ai-engine/design-library-indexer
-nohup /home/rpi/ai-engine/venv/bin/python run_indexer.py index -v \
-  > /home/rpi/ai-engine/logs/index-resume-$(date +%Y%m%d-%H%M%S).log 2>&1 &
+cd $HOME/ai-engine/design-library-indexer
+nohup $HOME/ai-engine/venv/bin/python run_indexer.py index -v \
+  > $HOME/ai-engine/logs/index-resume-$(date +%Y%m%d-%H%M%S).log 2>&1 &
 
 # 1. Kill the old RAG API
 pkill -f "uvicorn main:app"
 
 # 2. Start the new RAG API with increased timeout
-cd /home/rpi/ai-engine/rag-api
-nohup /home/rpi/ai-engine/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 \
-  > /home/rpi/ai-engine/logs/rag-api.log 2>&1 &
+cd $HOME/ai-engine/rag-api
+nohup $HOME/ai-engine/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 \
+  > $HOME/ai-engine/logs/rag-api.log 2>&1 &
 
-# 3. Copy the updated nginx config and reload
-sudo cp /home/rpi/ai-engine/setup-ai-process/nginx-ai-engine.conf /etc/nginx/sites-available/ai-engine
+# 3. Copy the updated nginx config and reload (substitutes your home directory)
+sed "s|AI_ENGINE_DIR|$HOME/ai-engine|g" \
+  $HOME/ai-engine/setup-ai-process/nginx-ai-engine.conf \
+  | sudo tee /etc/nginx/sites-available/ai-engine > /dev/null
 sudo ln -sf /etc/nginx/sites-available/ai-engine /etc/nginx/sites-enabled/ai-engine
 sudo rm -f /etc/nginx/sites-enabled/default
-sudo chmod o+x /home/rpi /home/rpi/ai-engine /home/rpi/ai-engine/frontend
-sudo chmod o+r /home/rpi/ai-engine/frontend/index.html
+sudo chmod o+x $HOME $HOME/ai-engine $HOME/ai-engine/frontend
+sudo chmod o+r $HOME/ai-engine/frontend/index.html
 sudo nginx -t && sudo systemctl start nginx && sudo systemctl reload nginx
 ```
 
@@ -383,34 +389,34 @@ sudo systemctl disable design-library-reindex.timer
 ## Index Statistics
 
 ```bash
-cd /home/rpi/ai-engine/design-library-indexer
-/home/rpi/ai-engine/venv/bin/python run_indexer.py stats
+cd $HOME/ai-engine/design-library-indexer
+$HOME/ai-engine/venv/bin/python run_indexer.py stats
 ```
 
 ## Reset Index
 
 ```bash
-cd /home/rpi/ai-engine/design-library-indexer
-/home/rpi/ai-engine/venv/bin/python run_indexer.py reset
+cd $HOME/ai-engine/design-library-indexer
+$HOME/ai-engine/venv/bin/python run_indexer.py reset
 ```
 
 ## Monitoring
 
 ```bash
 # Watch indexing logs (logs every file — set log_every_n_files in config.py to change)
-tail -f /home/rpi/ai-engine/logs/indexer-manual.log
+tail -f $HOME/ai-engine/logs/indexer-manual.log
 
 # Watch auto-tuning decisions
-tail -f /home/rpi/ai-engine/logs/indexer-manual.log | grep "Auto-tune"
+tail -f $HOME/ai-engine/logs/indexer-manual.log | grep "Auto-tune"
 
 # Watch thermal throttle events (triggers at >75°C, recovers at <65°C)
-tail -f /home/rpi/ai-engine/logs/indexer-manual.log | grep -E "Thermal|throttle|recovery"
+tail -f $HOME/ai-engine/logs/indexer-manual.log | grep -E "Thermal|throttle|recovery"
 
 # Watch file watcher
-tail -f /home/rpi/ai-engine/logs/watcher.log
+tail -f $HOME/ai-engine/logs/watcher.log
 
 # Watch RAG API
-tail -f /home/rpi/ai-engine/logs/rag-api.log
+tail -f $HOME/ai-engine/logs/rag-api.log
 
 # Check RAG API health
 curl -s http://localhost:8000/health | python3 -m json.tool
@@ -435,7 +441,7 @@ uptime
 ## Directory Structure
 
 ```
-/home/rpi/ai-engine/
+$HOME/ai-engine/
 ├── setup.sh                    # One-time setup script (Pi 4)
 ├── design-library-indexer/     # Indexer application (GitHub repo)
 │   ├── indexer/                # Python modules
@@ -502,10 +508,10 @@ Current performance settings in `config.py`:
 After changing config, run a full re-index:
 
 ```bash
-cd /home/rpi/ai-engine/design-library-indexer
+cd $HOME/ai-engine/design-library-indexer
 pkill -f "run_indexer.py"
-nohup /home/rpi/ai-engine/venv/bin/python run_indexer.py index --full -v \
-  > /home/rpi/ai-engine/logs/full-index-$(date +%Y%m%d-%H%M%S).log 2>&1 &
+nohup $HOME/ai-engine/venv/bin/python run_indexer.py index --full -v \
+  > $HOME/ai-engine/logs/full-index-$(date +%Y%m%d-%H%M%S).log 2>&1 &
 ```
 
 ### Adding new repos

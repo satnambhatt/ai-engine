@@ -1,3 +1,4 @@
 #!/bin/bash
-cd /home/rpi/ai-engine/design-library-indexer
-/home/rpi/ai-engine/venv/bin/python run_indexer.py search "$@"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${SCRIPT_DIR}/design-library-indexer"
+"${SCRIPT_DIR}/venv/bin/python" run_indexer.py search "$@"

@@ -4,7 +4,7 @@ Adaptive worker auto-tuning for embedding parallelization.
 Dynamically adjusts worker count based on:
 - CPU load average
 - Available RAM
-- CPU temperature (Raspberry Pi specific)
+- CPU temperature (Raspberry Pi, Linux x86/ARM, or any platform with psutil sensors)
 
 Safety-first design: never crashes indexing, always falls back gracefully.
 """
@@ -56,13 +56,18 @@ def get_available_ram_gb() -> Optional[float]:
 
 def get_cpu_temp() -> Optional[float]:
     """
-    Get CPU temperature in Celsius (Raspberry Pi specific).
+    Get CPU temperature in Celsius.
 
-    Returns None if temperature cannot be read.
+    Tries multiple methods in order:
+    1. vcgencmd (Raspberry Pi)
+    2. /sys/class/thermal/thermal_zone* (Linux — works on x86 PCs, ARM SBCs, etc.)
+    3. psutil.sensors_temperatures() (cross-platform fallback)
+
+    Returns None if temperature cannot be read on this platform.
     Falls back gracefully - never crashes.
     """
+    # 1. Raspberry Pi: vcgencmd measure_temp
     try:
-        # Raspberry Pi: vcgencmd measure_temp
         result = subprocess.run(
             ['vcgencmd', 'measure_temp'],
             capture_output=True,
@@ -70,19 +75,52 @@ def get_cpu_temp() -> Optional[float]:
             timeout=1.0,
             check=False,
         )
-
         if result.returncode == 0:
-            # Parse output like: temp=58.0'C
             output = result.stdout.strip()
             if 'temp=' in output:
                 temp_str = output.split('=')[1].split("'")[0]
                 return float(temp_str)
-
     except (subprocess.TimeoutExpired, subprocess.SubprocessError, ValueError, IndexError) as e:
-        logger.debug(f"Temperature read failed: {e}")
+        logger.debug(f"vcgencmd temperature read failed: {e}")
     except FileNotFoundError:
-        # vcgencmd not available (not on Raspberry Pi)
-        logger.debug("vcgencmd not found - not running on Raspberry Pi")
+        logger.debug("vcgencmd not found - not on Raspberry Pi, trying other methods")
+
+    # 2. Linux thermal zones: /sys/class/thermal/thermal_zone*/temp
+    # Returns millidegrees Celsius; pick the highest reading across all zones.
+    try:
+        thermal_base = "/sys/class/thermal"
+        zone_dirs = sorted(
+            p for p in os.listdir(thermal_base)
+            if p.startswith("thermal_zone")
+        )
+        temps = []
+        for zone in zone_dirs:
+            temp_file = os.path.join(thermal_base, zone, "temp")
+            try:
+                with open(temp_file) as f:
+                    temps.append(int(f.read().strip()) / 1000.0)
+            except (OSError, ValueError):
+                continue
+        if temps:
+            return max(temps)
+    except (OSError, FileNotFoundError) as e:
+        logger.debug(f"Linux thermal zone read failed: {e}")
+
+    # 3. psutil sensors_temperatures (cross-platform)
+    if HAS_PSUTIL:
+        try:
+            sensors = psutil.sensors_temperatures()
+            if sensors:
+                all_temps = [
+                    entry.current
+                    for readings in sensors.values()
+                    for entry in readings
+                    if entry.current is not None
+                ]
+                if all_temps:
+                    return max(all_temps)
+        except (AttributeError, Exception) as e:
+            logger.debug(f"psutil temperature read failed: {e}")
 
     return None
 
